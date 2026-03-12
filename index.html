@@ -17,6 +17,7 @@
         align-items: center;
         justify-content: center;
         z-index: 99;
+        transition: opacity 0.8s ease-out; /* Slower fade out of the whole screen */
       }
 
       #loader-bar {
@@ -26,6 +27,7 @@
         border-radius: 10px;
         overflow: hidden;
         margin-top: 20px;
+        margin-bottom: 20px;
       }
 
       #loader-fill {
@@ -33,7 +35,8 @@
         height: 100%;
         background: #ff0000;
         box-shadow: 0 0 10px #ff0000;
-        transition: width 0.5s ease-out;
+        /* Smooth transition for every movement */
+        transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); 
       }
 
       #loader-text {
@@ -42,6 +45,20 @@
         font-size: 12px;
         letter-spacing: 2px;
         text-transform: uppercase;
+      }
+
+      /* The Spinner */
+      .spinner {
+        width: 30px;
+        height: 30px;
+        border: 3px solid rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        border-top-color: #ff0000;
+        animation: spin 1s ease-in-out infinite;
+      }
+
+      @keyframes spin {
+        to { transform: rotate(360deg); }
       }
     </style>
   </head>
@@ -52,6 +69,7 @@
       <div id="loader-bar">
         <div id="loader-fill"></div>
       </div>
+      <div class="spinner"></div>
     </div>
 
     <canvas id="unity-canvas" width=960 height=540 tabindex="-1" style="width: 100%; height: 100%; background: #000"></canvas>
@@ -87,23 +105,29 @@
         productName: "NSMB-MarioVsLuigi",
         productVersion: "2.0.4.1",
       }, (progress) => {
-        // 1. Download Phase (0% to 90% Unity progress maps to 0% to 75% visual)
         if (progress < 0.9) {
           currentVisualProgress = (progress / 0.9) * 75;
           updateUI(currentVisualProgress, "Downloading Assets...");
         } 
-        // 2. Start the slow crawl once we hit that 90% (75% visual) mark
         else if (progress >= 0.9 && !fakeProgressInterval) {
           startSlowCrawl();
         }
       }).then((unityInstance) => {
-        // 3. Final Phase: Clear the timer and snap to 100%
+        // Stop the crawl
         clearInterval(fakeProgressInterval);
+        
+        // 1. Move to 100%
         updateUI(100, "Ready!");
+
+        // 2. Wait 800ms so the user actually sees the bar hit 100%
         setTimeout(() => {
           loaderContainer.style.opacity = "0";
-          setTimeout(() => { loaderContainer.style.display = "none"; }, 500);
-        }, 500);
+          // 3. Finally remove it from the DOM after the fade finishes
+          setTimeout(() => { 
+            loaderContainer.style.display = "none"; 
+          }, 800);
+        }, 800);
+
       }).catch((message) => {
         alert(message);
       });
@@ -114,10 +138,9 @@
       }
 
       function startSlowCrawl() {
-        // Every 300ms, add a tiny bit of progress to keep the bar moving
         fakeProgressInterval = setInterval(() => {
           if (currentVisualProgress < 95) {
-            currentVisualProgress += 0.2; // Adjust this number to change crawl speed
+            currentVisualProgress += 0.15; // Slightly slower crawl
             updateUI(currentVisualProgress, "Processing Data...");
           }
         }, 300);
