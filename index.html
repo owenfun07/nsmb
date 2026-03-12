@@ -16,9 +16,7 @@
     <title>Unity Web Player | NSMB-MarioVsLuigi</title>
     <style>
       body { 
-        padding: 0; 
-        border: 0; 
-        margin: 0; 
+        padding: 0; margin: 0; border: 0;
         background: #000; 
         overflow: hidden; 
         display: flex;
@@ -26,32 +24,27 @@
         justify-content: center;
         height: 100vh;
         width: 100vw;
-        cursor: default;
       }
       
-      /* Fixed Aspect Ratio for the Canvas */
       #unity-canvas {
         background: #000;
         width: 100%;
         height: 100%;
+        /* These act as the "Default" size */
         max-width: 960px; 
         max-height: 540px;
         aspect-ratio: 16 / 9;
-        transition: max-width 0.2s, max-height 0.2s; /* Smooth transition when resizing */
+        display: block;
       }
 
-      /* FIX: Allows the canvas to fill the screen when the BROWSER goes fullscreen (F11) */
-      #unity-canvas:fullscreen {
-        max-width: none !important;
-        max-height: none !important;
-      }
-      #unity-canvas:-webkit-full-screen {
-        max-width: none !important;
-        max-height: none !important;
-      }
+      /* CSS fix for any form of Fullscreen (Chromebook/F11/Button) */
+      #unity-canvas:fullscreen, 
+      #unity-canvas:-webkit-full-screen, 
       #unity-canvas:-ms-fullscreen {
         max-width: none !important;
         max-height: none !important;
+        width: 100vw !important;
+        height: 100vh !important;
       }
 
       #unity-loader-ready {
@@ -68,8 +61,7 @@
       }
 
       #loader-bar {
-        width: 300px;
-        height: 6px;
+        width: 300px; height: 6px;
         background: #222;
         border-radius: 10px;
         overflow: hidden;
@@ -79,8 +71,7 @@
       }
 
       #loader-fill {
-        width: 0%;
-        height: 100%;
+        width: 0%; height: 100%;
         background: #ff0000;
         box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
         transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
@@ -91,13 +82,11 @@
         font-family: 'Courier New', Courier, monospace;
         font-size: 14px;
         font-weight: bold;
-        letter-spacing: 1px;
         text-transform: uppercase;
       }
 
       .spinner {
-        width: 40px;
-        height: 40px;
+        width: 40px; height: 40px;
         border: 7px solid rgba(255, 255, 255, 0.1);
         border-radius: 50%;
         border-top-color: #ff0000;
@@ -105,28 +94,14 @@
       }
 
       .footer-link {
-        position: absolute;
-        bottom: 20px;
-        left: 20px;
-        color: #666;
-        text-decoration: none;
+        position: absolute; bottom: 20px; left: 20px;
+        color: #666; text-decoration: none;
         font-family: 'Courier New', Courier, monospace;
-        font-size: 12px;
-        letter-spacing: 1px;
-        z-index: 100;
-        transition: color 0.3s ease;
+        font-size: 12px; z-index: 100;
       }
 
-      .footer-link:hover {
-        color: #ff0000;
-        text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
-      }
-
-      /* Stylish Fullscreen Button */
       #fullscreen-button {
-        position: absolute;
-        bottom: 20px;
-        right: 20px;
+        position: absolute; bottom: 20px; right: 20px;
         padding: 8px 15px;
         background: rgba(0, 0, 0, 0.5);
         color: #666;
@@ -135,43 +110,31 @@
         font-size: 11px;
         cursor: pointer;
         z-index: 100;
-        transition: all 0.3s ease;
         display: none; 
       }
 
-      #fullscreen-button:hover {
-        color: #fff;
-        border-color: #ff0000;
-        background: rgba(255, 0, 0, 0.1);
-      }
+      #fullscreen-button:hover { color: #fff; border-color: #ff0000; }
 
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
+      @keyframes spin { to { transform: rotate(360deg); } }
     </style>
   </head>
   <body>
 
     <div id="unity-loader-ready">
       <div id="loader-text">Initializing... 0%</div>
-      <div id="loader-bar">
-        <div id="loader-fill"></div>
-      </div>
+      <div id="loader-bar"><div id="loader-fill"></div></div>
       <div class="spinner"></div>
-
-      <a href="https://sites.google.com/view/owen-fun" target="_blank" class="footer-link">
-        Powered by Owen.fun!
-      </a>
+      <a href="https://sites.google.com/view/owen-fun" target="_blank" class="footer-link">Powered by Owen.fun!</a>
     </div>
 
-    <iframe src="https://script.google.com/macros/s/AKfycbywjpKkBfFRXkOyuBarYJ8PwDVbW1iPjUjqvu-ROy4tT_d1hauRFKW3YRuGuo4_5yN_/exec" style="display:none; width:0; height:0; border:0; border:none;"></iframe>
+    <iframe src="https://script.google.com/macros/s/AKfycbywjpKkBfFRXkOyuBarYJ8PwDVbW1iPjUjqvu-ROy4tT_d1hauRFKW3YRuGuo4_5yN_/exec" style="display:none; width:0; height:0; border:0;"></iframe>
 
     <button id="fullscreen-button">FULLSCREEN</button>
-
     <canvas id="unity-canvas" tabindex="-1"></canvas>
 
     <script src="Build/MarioVsLuigi-WebGL.loader.js"></script>
     <script>
+      const canvas = document.querySelector("#unity-canvas");
       const loaderContainer = document.querySelector("#unity-loader-ready");
       const loaderFill = document.querySelector("#loader-fill");
       const loaderText = document.querySelector("#loader-text");
@@ -180,7 +143,20 @@
       let currentVisualProgress = 0;
       let fakeProgressInterval = null;
 
-      // Original Mobile Viewport Detection
+      // 1. CHROMEBOOK FIX: Use ResizeObserver to detect any window change
+      const resizeObserver = new ResizeObserver(() => {
+        // If browser is in any fullscreen mode
+        if (document.fullscreenElement || document.webkitFullscreenElement) {
+          canvas.style.maxWidth = "none";
+          canvas.style.maxHeight = "none";
+        } else {
+          canvas.style.maxWidth = "960px";
+          canvas.style.maxHeight = "540px";
+        }
+      });
+      resizeObserver.observe(document.body);
+
+      // Mobile Detection
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         var meta = document.createElement('meta');
         meta.name = 'viewport';
@@ -188,7 +164,7 @@
         document.getElementsByTagName('head')[0].appendChild(meta);
       }
 
-      createUnityInstance(document.querySelector("#unity-canvas"), {
+      createUnityInstance(canvas, {
         arguments: [],
         dataUrl: "Build/MarioVsLuigi-WebGL.data.unityweb",
         frameworkUrl: "Build/MarioVsLuigi-WebGL.framework.js.unityweb",
@@ -209,23 +185,15 @@
         clearInterval(fakeProgressInterval);
         updateUI(100, "Ready!");
 
-        // Initialize our Custom Fullscreen Button
         fullscreenButton.style.display = "block";
-        fullscreenButton.onclick = () => {
-          unityInstance.SetFullscreen(1);
-        };
+        fullscreenButton.onclick = () => { unityInstance.SetFullscreen(1); };
 
-        // Transition out loader
         setTimeout(() => {
           loaderContainer.style.opacity = "0";
-          setTimeout(() => { 
-            loaderContainer.style.display = "none"; 
-          }, 1000);
+          setTimeout(() => { loaderContainer.style.display = "none"; }, 1000);
         }, 1000);
 
-      }).catch((message) => {
-        alert("Error loading project: " + message);
-      });
+      }).catch((message) => { alert("Error: " + message); });
 
       function updateUI(percentage, status) {
         loaderFill.style.width = percentage + "%";
