@@ -31,14 +31,14 @@
       #loader-fill {
         width: 0%;
         height: 100%;
-        background: #ff0000; /* Mario Red */
+        background: #ff0000;
         box-shadow: 0 0 10px #ff0000;
-        transition: width 0.4s ease-out;
+        transition: width 0.5s ease-out;
       }
 
       #loader-text {
         color: #ccc;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-family: sans-serif;
         font-size: 12px;
         letter-spacing: 2px;
         text-transform: uppercase;
@@ -62,6 +62,9 @@
       const loaderFill = document.querySelector("#loader-fill");
       const loaderText = document.querySelector("#loader-text");
 
+      let currentVisualProgress = 0;
+      let fakeProgressInterval = null;
+
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         var meta = document.createElement('meta');
         meta.name = 'viewport';
@@ -84,35 +87,41 @@
         productName: "NSMB-MarioVsLuigi",
         productVersion: "2.0.4.1",
       }, (progress) => {
-        let visualProgress = 0;
-
+        // 1. Download Phase (0% to 90% Unity progress maps to 0% to 75% visual)
         if (progress < 0.9) {
-          // 1. Downloading Phase: Maps Unity 0-90% to Visual 0-75%
-          visualProgress = (progress / 0.9) * 0.75;
-          loaderText.innerHTML = "Downloading Assets... " + Math.round(visualProgress * 100) + "%";
-        } else {
-          // 2. Processing Phase: Maps Unity 90-100% to Visual 75-95%
-          // This makes the last bit crawl slowly instead of jumping
-          visualProgress = 0.75 + ((progress - 0.9) / 0.1) * 0.20;
-          loaderText.innerHTML = "Processing Data... " + Math.round(visualProgress * 100) + "%";
+          currentVisualProgress = (progress / 0.9) * 75;
+          updateUI(currentVisualProgress, "Downloading Assets...");
+        } 
+        // 2. Start the slow crawl once we hit that 90% (75% visual) mark
+        else if (progress >= 0.9 && !fakeProgressInterval) {
+          startSlowCrawl();
         }
-
-        loaderFill.style.width = (visualProgress * 100) + "%";
-
       }).then((unityInstance) => {
-        // 3. Completion Phase: Snap to 100% and hide
-        loaderFill.style.width = "100%";
-        loaderText.innerHTML = "Ready!";
-        
-        // Brief delay so user sees "100%" before it vanishes
+        // 3. Final Phase: Clear the timer and snap to 100%
+        clearInterval(fakeProgressInterval);
+        updateUI(100, "Ready!");
         setTimeout(() => {
-          loaderContainer.style.display = "none";
+          loaderContainer.style.opacity = "0";
+          setTimeout(() => { loaderContainer.style.display = "none"; }, 500);
         }, 500);
-
       }).catch((message) => {
-        loaderText.innerHTML = "Error occurred";
-        console.error(message);
+        alert(message);
       });
+
+      function updateUI(percentage, status) {
+        loaderFill.style.width = percentage + "%";
+        loaderText.innerHTML = status + " " + Math.round(percentage) + "%";
+      }
+
+      function startSlowCrawl() {
+        // Every 300ms, add a tiny bit of progress to keep the bar moving
+        fakeProgressInterval = setInterval(() => {
+          if (currentVisualProgress < 95) {
+            currentVisualProgress += 0.2; // Adjust this number to change crawl speed
+            updateUI(currentVisualProgress, "Processing Data...");
+          }
+        }, 300);
+      }
     </script>
   </body>
 </html>
