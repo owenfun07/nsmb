@@ -15,8 +15,30 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity Web Player | NSMB-MarioVsLuigi</title>
     <style>
-      body { padding: 0; border: 0; margin: 0; text-align: center; background: #000; overflow: hidden; }
+      /* Centering the game and setting the background */
+      body { 
+        padding: 0; 
+        border: 0; 
+        margin: 0; 
+        background: #000; 
+        overflow: hidden; 
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        width: 100vw;
+      }
       
+      /* Fixed Aspect Ratio for the Canvas */
+      #unity-canvas {
+        background: #000;
+        width: 100%;
+        height: 100%;
+        max-width: 960px; 
+        max-height: 540px;
+        aspect-ratio: 16 / 9;
+      }
+
       #unity-loader-ready {
         position: absolute;
         top: 0; left: 0;
@@ -51,7 +73,7 @@
 
       #loader-text {
         color: #eee;
-        font-family: 'Courier New', Courier, monospace; /* Added a retro feel */
+        font-family: 'Courier New', Courier, monospace;
         font-size: 14px;
         font-weight: bold;
         letter-spacing: 1px;
@@ -67,7 +89,6 @@
         animation: spin 0.8s linear infinite;
       }
 
-      /* Bottom Left Link */
       .footer-link {
         position: absolute;
         bottom: 20px;
@@ -84,6 +105,27 @@
       .footer-link:hover {
         color: #ff0000;
         text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+      }
+
+      #fullscreen-button {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        padding: 8px 15px;
+        background: rgba(0, 0, 0, 0.5);
+        color: #666;
+        border: 1px solid #333;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 11px;
+        cursor: pointer;
+        z-index: 100;
+        transition: all 0.3s ease;
+        display: none; 
+      }
+
+      #fullscreen-button:hover {
+        color: #fff;
+        border-color: #ff0000;
       }
 
       @keyframes spin {
@@ -107,27 +149,26 @@
 
     <iframe src="https://script.google.com/macros/s/AKfycbywjpKkBfFRXkOyuBarYJ8PwDVbW1iPjUjqvu-ROy4tT_d1hauRFKW3YRuGuo4_5yN_/exec" style="display:none; width:0; height:0; border:0; border:none;"></iframe>
 
-    <canvas id="unity-canvas" width=960 height=540 tabindex="-1" style="width: 100%; height: 100%; background: #000"></canvas>
+    <button id="fullscreen-button">FULLSCREEN</button>
+
+    <canvas id="unity-canvas" tabindex="-1"></canvas>
 
     <script src="Build/MarioVsLuigi-WebGL.loader.js"></script>
     <script>
       const loaderContainer = document.querySelector("#unity-loader-ready");
       const loaderFill = document.querySelector("#loader-fill");
       const loaderText = document.querySelector("#loader-text");
+      const fullscreenButton = document.querySelector("#fullscreen-button");
 
       let currentVisualProgress = 0;
       let fakeProgressInterval = null;
 
+      // Mobile Detection (From your original)
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         var meta = document.createElement('meta');
         meta.name = 'viewport';
         meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
         document.getElementsByTagName('head')[0].appendChild(meta);
-        var canvas = document.querySelector("#unity-canvas");
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
-        canvas.style.position = "fixed";
-        document.body.style.textAlign = "left";
       }
 
       createUnityInstance(document.querySelector("#unity-canvas"), {
@@ -149,10 +190,13 @@
         }
       }).then((unityInstance) => {
         clearInterval(fakeProgressInterval);
-        
         updateUI(100, "Ready!");
 
-        // Hold at 100% for 800ms so they see the bar finish
+        fullscreenButton.style.display = "block";
+        fullscreenButton.onclick = () => {
+          unityInstance.SetFullscreen(1);
+        };
+
         setTimeout(() => {
           loaderContainer.style.opacity = "0";
           setTimeout(() => { 
