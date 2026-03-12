@@ -15,7 +15,6 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity Web Player | NSMB-MarioVsLuigi</title>
     <style>
-      /* Centering the game and setting the background */
       body { 
         padding: 0; 
         border: 0; 
@@ -27,6 +26,7 @@
         justify-content: center;
         height: 100vh;
         width: 100vw;
+        cursor: default;
       }
       
       /* Fixed Aspect Ratio for the Canvas */
@@ -37,6 +37,21 @@
         max-width: 960px; 
         max-height: 540px;
         aspect-ratio: 16 / 9;
+        transition: max-width 0.2s, max-height 0.2s; /* Smooth transition when resizing */
+      }
+
+      /* FIX: Allows the canvas to fill the screen when the BROWSER goes fullscreen (F11) */
+      #unity-canvas:fullscreen {
+        max-width: none !important;
+        max-height: none !important;
+      }
+      #unity-canvas:-webkit-full-screen {
+        max-width: none !important;
+        max-height: none !important;
+      }
+      #unity-canvas:-ms-fullscreen {
+        max-width: none !important;
+        max-height: none !important;
       }
 
       #unity-loader-ready {
@@ -107,6 +122,7 @@
         text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
       }
 
+      /* Stylish Fullscreen Button */
       #fullscreen-button {
         position: absolute;
         bottom: 20px;
@@ -126,6 +142,7 @@
       #fullscreen-button:hover {
         color: #fff;
         border-color: #ff0000;
+        background: rgba(255, 0, 0, 0.1);
       }
 
       @keyframes spin {
@@ -163,7 +180,7 @@
       let currentVisualProgress = 0;
       let fakeProgressInterval = null;
 
-      // Mobile Detection (From your original)
+      // Original Mobile Viewport Detection
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
         var meta = document.createElement('meta');
         meta.name = 'viewport';
@@ -192,11 +209,13 @@
         clearInterval(fakeProgressInterval);
         updateUI(100, "Ready!");
 
+        // Initialize our Custom Fullscreen Button
         fullscreenButton.style.display = "block";
         fullscreenButton.onclick = () => {
           unityInstance.SetFullscreen(1);
         };
 
+        // Transition out loader
         setTimeout(() => {
           loaderContainer.style.opacity = "0";
           setTimeout(() => { 
