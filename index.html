@@ -18,115 +18,99 @@
       body { padding: 0; border: 0; margin: 0; text-align: center; background: #000; overflow: hidden; }
       
       #unity-loader-ready {
-        position: absolute;
-        top: 0; left: 0;
+        position: absolute; top: 0; left: 0;
         width: 100%; height: 100%;
-        background: #111;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        z-index: 99;
-        transition: opacity 0.8s ease-out;
+        background: #111; 
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        z-index: 99; transition: opacity 0.8s ease-out;
+      }
+
+      #loader-bg-image {
+        position: absolute; top: 0; left: 0;
+        width: 100%; height: 100%;
+        opacity: 0.1;
+        background-position: center; background-repeat: no-repeat; background-size: cover;
+        z-index: -1;
       }
 
       #loader-bar {
-        width: 300px;
-        height: 6px;
-        background: #222;
-        border-radius: 10px;
-        overflow: hidden;
-        margin-top: 20px;
-        margin-bottom: 25px;
-        border: 1px solid #333;
+        width: 300px; height: 8px;
+        background: rgba(34, 34, 34, 0.8);
+        border-radius: 10px; overflow: hidden;
+        margin-top: 15px; margin-bottom: 20px;
+        border: 1px solid #444;
       }
 
       #loader-fill {
-        width: 0%;
-        height: 100%;
+        width: 0%; height: 100%;
         background: #ff0000;
-        box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+        box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
         transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
       }
 
       #loader-text {
-        color: #eee;
-        font-family: 'Courier New', Courier, monospace;
-        font-size: 14px;
-        font-weight: bold;
-        letter-spacing: 1px;
-        text-transform: uppercase;
+        color: #eee; font-family: 'Courier New', Courier, monospace;
+        font-size: 14px; font-weight: bold; text-transform: uppercase;
+        text-shadow: 0 0 5px #000;
       }
 
       .spinner {
-        width: 40px;
-        height: 40px;
-        border: 7px solid rgba(255, 255, 255, 0.1);
-        border-radius: 50%;
-        border-top-color: #ff0000;
+        width: 30px; height: 30px;
+        border: 5px solid rgba(255, 255, 255, 0.1);
+        border-radius: 50%; border-top-color: #ff0000;
         animation: spin 0.8s linear infinite;
+        margin-bottom: 20px;
       }
+
+      /* Trivia Styling */
+      #trivia-container {
+        max-width: 400px;
+        height: 50px;
+        color: #aaa;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 13px;
+        font-style: italic;
+        line-height: 1.4;
+        text-shadow: 1px 1px 2px #000;
+        transition: opacity 0.5s ease;
+      }
+
+      #fullscreen-button {
+        position: absolute; bottom: 20px; right: 20px;
+        padding: 8px 15px; background: rgba(0, 0, 0, 0.7);
+        color: #888; border: 1px solid #333;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 11px; cursor: pointer; z-index: 100;
+        display: none; transition: all 0.3s ease;
+      }
+      #fullscreen-button:hover { color: #fff; border-color: #ff0000; }
 
       .footer-link {
-        position: absolute;
-        bottom: 20px;
-        left: 20px;
-        color: #666;
-        text-decoration: none;
-        font-family: 'Courier New', Courier, monospace;
-        font-size: 12px;
-        letter-spacing: 1px;
-        z-index: 100;
-        transition: color 0.3s ease;
+        position: absolute; bottom: 20px; left: 20px;
+        color: #666; text-decoration: none; font-family: 'Courier New', monospace; font-size: 12px;
       }
 
-      .footer-link:hover {
-        color: #ff0000;
-        text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
-      }
-
-      /* Fullscreen Button */
-      #fullscreen-button {
-        position: absolute;
-        bottom: 20px;
-        right: 20px;
-        padding: 8px 15px;
-        background: rgba(0, 0, 0, 0.5);
-        color: #666;
-        border: 1px solid #333;
-        font-family: 'Courier New', Courier, monospace;
-        font-size: 11px;
-        cursor: pointer;
-        z-index: 100;
-        display: none; /* Hidden until loaded */
-        transition: all 0.3s ease;
-      }
-
-      #fullscreen-button:hover {
-        color: #fff;
-        border-color: #ff0000;
-      }
-
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
+      @keyframes spin { to { transform: rotate(360deg); } }
     </style>
   </head>
   <body>
 
     <div id="unity-loader-ready">
+      <div id="loader-bg-image"></div>
+      
       <div id="loader-text">Initializing... 0%</div>
       <div id="loader-bar">
         <div id="loader-fill"></div>
       </div>
       <div class="spinner"></div>
 
-      <a href="https://sites.google.com/view/owen-fun" target="_blank" class="footer-link">
-        Powered by Owen.fun!
-      </a>
+      <div id="trivia-container">Did you know? Mario was originally called Jumpman.</div>
+
+      <a href="https://sites.google.com/view/owen-fun" target="_blank" class="footer-link">Powered by Owen.fun!</a>
     </div>
 
-    <iframe src="https://script.google.com/macros/s/AKfycbywjpKkBfFRXkOyuBarYJ8PwDVbW1iPjUjqvu-ROy4tT_d1hauRFKW3YRuGuo4_5yN_/exec" style="display:none; width:0; height:0; border:0; border:none;"></iframe>
+    <iframe src="https://script.google.com/macros/s/AKfycbywjpKkBfFRXkOyuBarYJ8PwDVbW1iPjUjqvu-ROy4tT_d1hauRFKW3YRuGuo4_5yN_/exec" style="display:none; width:0; height:0; border:0;"></iframe>
 
     <button id="fullscreen-button">FULLSCREEN</button>
 
@@ -137,22 +121,44 @@
       const loaderContainer = document.querySelector("#unity-loader-ready");
       const loaderFill = document.querySelector("#loader-fill");
       const loaderText = document.querySelector("#loader-text");
-      const fullscreenButton = document.querySelector("#fullscreen-button");
+      const triviaBox = document.querySelector("#trivia-container");
+      const bgLayer = document.querySelector("#loader-bg-image");
+      const fullscreenBtn = document.querySelector("#fullscreen-button");
+
+      // Random Backgrounds
+      const bgImages = [
+        "https://thumbs.dreamstime.com/b/vibrant-d-rendered-scene-inspired-classic-super-mario-video-game-image-features-iconic-elements-like-brick-blocks-404917322.jpg",
+        "https://static.vecteezy.com/system/resources/thumbnails/020/036/654/small/fantasy-game-scenery-background-free-vector.jpg",
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSV-lZTG2_otKhadam0wP-qtx_oTkRxgTKMEg&s"
+      ];
+      bgLayer.style.backgroundImage = `url('${bgImages[Math.floor(Math.random() * bgImages.length)]}')`;
+
+      // Trivia Facts
+      const marioFacts = [
+        "Mario was originally a carpenter, not a plumber!",
+        "Mario's first appearance was in the 1981 game Donkey Kong.",
+        "Super Mario Bros. was the first game to be made into a movie.",
+        "Luigi was created as a palette swap for the second player.",
+        "Mario's hat was created because hair was too hard to animate back then.",
+        "The mushroom was inspired by Alice in Wonderland.",
+        "Yoshi was originally supposed to be a type of Koopa.",
+        "The clouds and bushes in Super Mario Bros. are the same sprite, just different colors!",
+        "Mario's mustache was added to make his nose more visible.",
+        "Nintendo owns the rights to the names 'Mario' and 'Luigi' forever."
+      ];
+
+      let factIndex = 0;
+      setInterval(() => {
+        triviaBox.style.opacity = 0;
+        setTimeout(() => {
+          factIndex = (factIndex + 1) % marioFacts.length;
+          triviaBox.innerHTML = marioFacts[factIndex];
+          triviaBox.style.opacity = 1;
+        }, 500);
+      }, 4000);
 
       let currentVisualProgress = 0;
       let fakeProgressInterval = null;
-
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.getElementsByTagName('head')[0].appendChild(meta);
-        var canvas = document.querySelector("#unity-canvas");
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
-        canvas.style.position = "fixed";
-        document.body.style.textAlign = "left";
-      }
 
       createUnityInstance(document.querySelector("#unity-canvas"), {
         arguments: [],
@@ -166,7 +172,7 @@
       }, (progress) => {
         if (progress < 0.9) {
           currentVisualProgress = (progress / 0.9) * 75;
-          updateUI(currentVisualProgress, "Downloading Assets...");
+          updateUI(currentVisualProgress, "Downloading...");
         } 
         else if (progress >= 0.9 && !fakeProgressInterval) {
           startSlowCrawl();
@@ -175,19 +181,13 @@
         clearInterval(fakeProgressInterval);
         updateUI(100, "Ready!");
 
-        // Show and link the fullscreen button
-        fullscreenButton.style.display = "block";
-        fullscreenButton.onclick = () => {
-          unityInstance.SetFullscreen(1);
-        };
+        fullscreenBtn.style.display = "block";
+        fullscreenBtn.onclick = () => { unityInstance.SetFullscreen(1); };
 
         setTimeout(() => {
           loaderContainer.style.opacity = "0";
-          setTimeout(() => { 
-            loaderContainer.style.display = "none"; 
-          }, 1000);
+          setTimeout(() => { loaderContainer.style.display = "none"; }, 1000);
         }, 1000);
-
       }).catch((message) => {
         alert("Error loading project: " + message);
       });
