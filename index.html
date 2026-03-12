@@ -17,44 +17,63 @@
         align-items: center;
         justify-content: center;
         z-index: 99;
-        transition: opacity 0.8s ease-out; /* Slower fade out of the whole screen */
+        transition: opacity 0.8s ease-out;
       }
 
       #loader-bar {
         width: 300px;
-        height: 4px;
-        background: #333;
+        height: 6px;
+        background: #222;
         border-radius: 10px;
         overflow: hidden;
         margin-top: 20px;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
+        border: 1px solid #333;
       }
 
       #loader-fill {
         width: 0%;
         height: 100%;
         background: #ff0000;
-        box-shadow: 0 0 10px #ff0000;
-        /* Smooth transition for every movement */
-        transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); 
+        box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+        transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
       }
 
       #loader-text {
-        color: #ccc;
-        font-family: sans-serif;
-        font-size: 12px;
-        letter-spacing: 2px;
+        color: #eee;
+        font-family: 'Courier New', Courier, monospace; /* Added a retro feel */
+        font-size: 14px;
+        font-weight: bold;
+        letter-spacing: 1px;
         text-transform: uppercase;
       }
 
-      /* The Spinner */
       .spinner {
-        width: 30px;
-        height: 30px;
-        border: 3px solid rgba(255, 255, 255, 0.1);
+        width: 40px;
+        height: 40px;
+        border: 7px solid rgba(255, 255, 255, 0.1);
         border-radius: 50%;
         border-top-color: #ff0000;
-        animation: spin 1s ease-in-out infinite;
+        animation: spin 0.8s linear infinite;
+      }
+
+      /* Bottom Left Link */
+      .footer-link {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        color: #666;
+        text-decoration: none;
+        font-family: 'Courier New', Courier, monospace;
+        font-size: 12px;
+        letter-spacing: 1px;
+        z-index: 100;
+        transition: color 0.3s ease;
+      }
+
+      .footer-link:hover {
+        color: #ff0000;
+        text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
       }
 
       @keyframes spin {
@@ -70,6 +89,10 @@
         <div id="loader-fill"></div>
       </div>
       <div class="spinner"></div>
+
+      <a href="https://sites.google.com/view/owen-fun" target="_blank" class="footer-link">
+        Powered by Owen.fun!
+      </a>
     </div>
 
     <canvas id="unity-canvas" width=960 height=540 tabindex="-1" style="width: 100%; height: 100%; background: #000"></canvas>
@@ -113,23 +136,20 @@
           startSlowCrawl();
         }
       }).then((unityInstance) => {
-        // Stop the crawl
         clearInterval(fakeProgressInterval);
         
-        // 1. Move to 100%
         updateUI(100, "Ready!");
 
-        // 2. Wait 800ms so the user actually sees the bar hit 100%
+        // Hold at 100% for 800ms so they see the bar finish
         setTimeout(() => {
           loaderContainer.style.opacity = "0";
-          // 3. Finally remove it from the DOM after the fade finishes
           setTimeout(() => { 
             loaderContainer.style.display = "none"; 
-          }, 800);
-        }, 800);
+          }, 1000);
+        }, 1000);
 
       }).catch((message) => {
-        alert(message);
+        alert("Error loading project: " + message);
       });
 
       function updateUI(percentage, status) {
@@ -140,10 +160,10 @@
       function startSlowCrawl() {
         fakeProgressInterval = setInterval(() => {
           if (currentVisualProgress < 95) {
-            currentVisualProgress += 0.15; // Slightly slower crawl
-            updateUI(currentVisualProgress, "Processing Data...");
+            currentVisualProgress += 0.12; 
+            updateUI(currentVisualProgress, "Assembling Data...");
           }
-        }, 300);
+        }, 250);
       }
     </script>
   </body>
