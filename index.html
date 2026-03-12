@@ -2,7 +2,6 @@
 <html lang="en-us">
   <head>
     <meta name="google-site-verification" content="rknS4rnGJEnrLYwoC__oZtgvZvqxGDidMVbIexUIqz8" />
-
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-NWCYHB9K8M"></script>
     <script>
       window.dataLayer = window.dataLayer || [];
@@ -26,6 +25,7 @@
         z-index: 99; transition: opacity 0.8s ease-out;
       }
 
+      /* Random Background Layer */
       #loader-bg-image {
         position: absolute; top: 0; left: 0;
         width: 100%; height: 100%;
@@ -34,64 +34,95 @@
         z-index: -1;
       }
 
+      #loader-text {
+        color: #eee; font-family: 'Courier New', Courier, monospace;
+        font-size: 14px; font-weight: bold; text-transform: uppercase;
+        margin-bottom: 10px; text-shadow: 0 0 8px #000;
+      }
+
       #loader-bar {
-        width: 300px; height: 8px;
-        background: rgba(34, 34, 34, 0.8);
+        width: 300px; height: 10px;
+        background: rgba(34, 34, 34, 0.9);
         border-radius: 10px; overflow: hidden;
-        margin-top: 15px; margin-bottom: 20px;
-        border: 1px solid #444;
+        border: 1px solid #444; margin-bottom: 25px;
       }
 
       #loader-fill {
         width: 0%; height: 100%;
-        background: #ff0000;
-        box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
-        transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+        background: #ff0000; box-shadow: 0 0 15px rgba(255, 0, 0, 0.7);
+        transition: width 0.4s ease-out;
       }
 
-      #loader-text {
-        color: #eee; font-family: 'Courier New', Courier, monospace;
-        font-size: 14px; font-weight: bold; text-transform: uppercase;
-        text-shadow: 0 0 5px #000;
+      /* Game Area */
+      #clicker-game {
+        display: flex; align-items: flex-end; justify-content: center;
+        gap: 25px; position: relative; margin-bottom: 10px; padding-bottom: 20px;
       }
 
-      .spinner {
-        width: 30px; height: 30px;
-        border: 5px solid rgba(255, 255, 255, 0.1);
-        border-radius: 50%; border-top-color: #ff0000;
-        animation: spin 0.8s linear infinite;
-        margin-bottom: 20px;
+      #mario-animation {
+        width: 75px; height: auto; mix-blend-mode: screen; 
       }
 
-      /* Trivia Styling */
+      #block-container {
+        display: flex; flex-direction: column; align-items: center;
+        cursor: pointer; user-select: none; position: relative;
+      }
+
+      /* SEPARATE SIZING FOR IMAGES */
+      .img-normal {
+        width: 62px; /* Adjust this for the 1st image */
+        height: 60px;
+        object-fit: contain;
+        transition: transform 0.1s ease;
+      }
+
+      .img-empty {
+        width: 60px; /* Adjust this for the 2nd image */
+        height: 60px;
+        object-fit: contain;
+        transition: transform 0.1s ease;
+      }
+
+      #coin-score {
+        color: #ffcc00; font-family: 'Courier New', Courier, monospace;
+        font-size: 18px; font-weight: bold; margin-top: 5px;
+        text-shadow: 2px 2px #000;
+      }
+
+      /* Floating Effects */
+      .floating-effect {
+        position: absolute; width: 100%; text-align: center;
+        top: -20px; font-family: 'Courier New', monospace;
+        font-weight: bold; pointer-events: none; z-index: 101;
+      }
+      .coin-pop { color: #ffcc00; animation: floatUp 0.5s ease-out forwards; }
+      .one-up-pop { color: #00ff00; font-size: 22px; animation: floatUp 1.2s ease-out forwards; text-shadow: 0 0 10px #00ff00; }
+
+      @keyframes floatUp {
+        0% { opacity: 1; transform: translateY(0); }
+        100% { opacity: 0; transform: translateY(-70px); }
+      }
+
       #trivia-container {
-        max-width: 400px;
-        height: 50px;
-        color: #aaa;
-        font-family: 'Courier New', Courier, monospace;
-        font-size: 13px;
-        font-style: italic;
-        line-height: 1.4;
-        text-shadow: 1px 1px 2px #000;
-        transition: opacity 0.5s ease;
+        max-width: 450px; height: 60px;
+        color: #bbb; font-family: 'Courier New', Courier, monospace;
+        font-size: 13px; line-height: 1.4;
+        text-shadow: 2px 2px 4px #000;
+        transition: opacity 0.5s ease; padding: 0 20px;
       }
 
       #fullscreen-button {
         position: absolute; bottom: 20px; right: 20px;
-        padding: 8px 15px; background: rgba(0, 0, 0, 0.7);
+        padding: 8px 15px; background: rgba(0,0,0,0.8);
         color: #888; border: 1px solid #333;
-        font-family: 'Courier New', Courier, monospace;
-        font-size: 11px; cursor: pointer; z-index: 100;
-        display: none; transition: all 0.3s ease;
+        font-family: 'Courier New', monospace; font-size: 11px;
+        cursor: pointer; display: none;
       }
-      #fullscreen-button:hover { color: #fff; border-color: #ff0000; }
 
       .footer-link {
         position: absolute; bottom: 20px; left: 20px;
         color: #666; text-decoration: none; font-family: 'Courier New', monospace; font-size: 12px;
       }
-
-      @keyframes spin { to { transform: rotate(360deg); } }
     </style>
   </head>
   <body>
@@ -99,21 +130,23 @@
     <div id="unity-loader-ready">
       <div id="loader-bg-image"></div>
       
-      <div id="loader-text">Initializing... 0%</div>
-      <div id="loader-bar">
-        <div id="loader-fill"></div>
+      <div id="loader-text">Warping to World... 0%</div>
+      <div id="loader-bar"><div id="loader-fill"></div></div>
+
+      <div id="clicker-game">
+        <img id="mario-animation" src="https://s13.gifyu.com/images/bm99v.gif" alt="Mario">
+        
+        <div id="block-container" onclick="hitBlock()">
+            <img id="q-block" class="img-normal" src="https://i.ibb.co/WWzWdQ3s/image.png" alt="Block">
+            <div id="coin-score">x0</div>
+        </div>
       </div>
-      <div class="spinner"></div>
 
-      <div id="trivia-container">Did you know? Mario was originally called Jumpman.</div>
-
-      <a href="https://sites.google.com/view/owen-fun" target="_blank" class="footer-link">Powered by Owen.fun!</a>
+      <div id="trivia-container">Welcome! Loading facts...</div>
+      <a href="https://sites.google.com/view/owen-fun" target="_blank" class="footer-link">Owen.fun</a>
     </div>
 
-    <iframe src="https://script.google.com/macros/s/AKfycbywjpKkBfFRXkOyuBarYJ8PwDVbW1iPjUjqvu-ROy4tT_d1hauRFKW3YRuGuo4_5yN_/exec" style="display:none; width:0; height:0; border:0;"></iframe>
-
     <button id="fullscreen-button">FULLSCREEN</button>
-
     <canvas id="unity-canvas" width=960 height=540 tabindex="-1" style="width: 100%; height: 100%; background: #000"></canvas>
 
     <script src="Build/MarioVsLuigi-WebGL.loader.js"></script>
@@ -123,28 +156,64 @@
       const loaderText = document.querySelector("#loader-text");
       const triviaBox = document.querySelector("#trivia-container");
       const bgLayer = document.querySelector("#loader-bg-image");
+      const qBlock = document.querySelector("#q-block");
+      const blockContainer = document.querySelector("#block-container");
+      const coinScoreDisp = document.querySelector("#coin-score");
       const fullscreenBtn = document.querySelector("#fullscreen-button");
 
-      // Random Backgrounds
-      const bgImages = [
-        "https://thumbs.dreamstime.com/b/vibrant-d-rendered-scene-inspired-classic-super-mario-video-game-image-features-iconic-elements-like-brick-blocks-404917322.jpg",
-        "https://static.vecteezy.com/system/resources/thumbnails/020/036/654/small/fantasy-game-scenery-background-free-vector.jpg",
-        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSV-lZTG2_otKhadam0wP-qtx_oTkRxgTKMEg&s"
-      ];
+      let coins = 0;
+      const imgNormal = "https://i.ibb.co/WWzWdQ3s/image.png";
+      const imgEmpty = "https://i.ibb.co/W4smBnxF/image.png";
+
+      function hitBlock() {
+        coins++;
+        coinScoreDisp.innerHTML = "x" + coins;
+
+        // Visual Swap and Sizing
+        qBlock.src = imgEmpty;
+        qBlock.className = "img-empty";
+        qBlock.style.transform = "translateY(-12px)";
+        
+        const coinEl = document.createElement("div");
+        coinEl.className = "floating-effect coin-pop";
+        coinEl.innerHTML = "+1";
+        blockContainer.appendChild(coinEl);
+
+        if (coins % 100 === 0) {
+          const upEl = document.createElement("div");
+          upEl.className = "floating-effect one-up-pop";
+          upEl.innerHTML = "1-UP!";
+          blockContainer.appendChild(upEl);
+          setTimeout(() => upEl.remove(), 1200);
+        }
+
+        setTimeout(() => {
+          qBlock.src = imgNormal;
+          qBlock.className = "img-normal";
+          qBlock.style.transform = "translateY(0)";
+          coinEl.remove();
+        }, 150);
+      }
+
+      const bgImages = ["https://thumbs.dreamstime.com/b/vibrant-d-rendered-scene-inspired-classic-super-mario-video-game-image-features-iconic-elements-like-brick-blocks-404917322.jpg", "https://static.vecteezy.com/system/resources/thumbnails/020/036/654/small/fantasy-game-scenery-background-free-vector.jpg", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSV-lZTG2_otKhadam0wP-qtx_oTkRxgTKMEg&s"];
       bgLayer.style.backgroundImage = `url('${bgImages[Math.floor(Math.random() * bgImages.length)]}')`;
 
-      // Trivia Facts
       const marioFacts = [
-        "Mario was originally a carpenter, not a plumber!",
-        "Mario's first appearance was in the 1981 game Donkey Kong.",
-        "Super Mario Bros. was the first game to be made into a movie.",
-        "Luigi was created as a palette swap for the second player.",
-        "Mario's hat was created because hair was too hard to animate back then.",
-        "The mushroom was inspired by Alice in Wonderland.",
-        "Yoshi was originally supposed to be a type of Koopa.",
-        "The clouds and bushes in Super Mario Bros. are the same sprite, just different colors!",
-        "Mario's mustache was added to make his nose more visible.",
-        "Nintendo owns the rights to the names 'Mario' and 'Luigi' forever."
+        "Mario's first appearance was in Donkey Kong (1981) as 'Jumpman'.",
+        "The mushroom power-up is based on the real Amanita Muscaria fungus.",
+        "Mario's hat was added to avoid animating hair movements.",
+        "The clouds and bushes in Super Mario Bros. are the same sprite!",
+        "Luigi was originally a palette-swap of Mario for the 2nd player.",
+        "Bowser was originally designed as an ox before becoming a turtle-dragon.",
+        "Wario's name comes from 'warui', the Japanese word for 'bad'.",
+        "Chain Chomps were inspired by a dog from Miyamoto's childhood.",
+        "Mario's mustache was used to make his nose stand out in 8-bit.",
+        "Super Mario World was the first game to feature Yoshi.",
+        "Mario Mario and Luigi Mario—that's their official full names!",
+        "The 1-Up sound is one of the most recognizable in gaming history.",
+        "Mario was originally a carpenter before becoming a plumber.",
+        "Koji Kondo composed the iconic theme officially called 'Ground Theme'.",
+        "The 1-Up Mushroom was originally orange and white in the arcade version."
       ];
 
       let factIndex = 0;
@@ -155,55 +224,34 @@
           triviaBox.innerHTML = marioFacts[factIndex];
           triviaBox.style.opacity = 1;
         }, 500);
-      }, 4000);
+      }, 3000);
 
-      let currentVisualProgress = 0;
-      let fakeProgressInterval = null;
-
-      createUnityInstance(document.querySelector("#unity-canvas"), {
-        arguments: [],
-        dataUrl: "Build/MarioVsLuigi-WebGL.data.unityweb",
-        frameworkUrl: "Build/MarioVsLuigi-WebGL.framework.js.unityweb",
-        codeUrl: "Build/MarioVsLuigi-WebGL.wasm.unityweb",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "ipodtouch0218",
-        productName: "NSMB-MarioVsLuigi",
-        productVersion: "2.0.4.1",
-      }, (progress) => {
+// Update this part in your createUnityInstance call
+      (progress) => {
         if (progress < 0.9) {
-          currentVisualProgress = (progress / 0.9) * 75;
+          // This maps the first 90% of real loading to 0-85% on your bar
+          currentVisualProgress = (progress / 0.9) * 85; 
           updateUI(currentVisualProgress, "Downloading...");
         } 
         else if (progress >= 0.9 && !fakeProgressInterval) {
+          // When Unity hits 90%, we start the slow crawl to 95%
           startSlowCrawl();
         }
-      }).then((unityInstance) => {
-        clearInterval(fakeProgressInterval);
-        updateUI(100, "Ready!");
+      }
 
-        fullscreenBtn.style.display = "block";
-        fullscreenBtn.onclick = () => { unityInstance.SetFullscreen(1); };
-
-        setTimeout(() => {
-          loaderContainer.style.opacity = "0";
-          setTimeout(() => { loaderContainer.style.display = "none"; }, 1000);
-        }, 1000);
-      }).catch((message) => {
-        alert("Error loading project: " + message);
-      });
+      // Update this function to cap at 95%
+      function startSlowCrawl() {
+        fakeProgressInterval = setInterval(() => {
+          if (currentVisualProgress < 95) { // Change this from 98 to 95
+            currentVisualProgress += 0.05; // Make it move slowly
+            updateUI(currentVisualProgress, "Assembling Data...");
+          }
+        }, 200);
+      }
 
       function updateUI(percentage, status) {
         loaderFill.style.width = percentage + "%";
         loaderText.innerHTML = status + " " + Math.round(percentage) + "%";
-      }
-
-      function startSlowCrawl() {
-        fakeProgressInterval = setInterval(() => {
-          if (currentVisualProgress < 95) {
-            currentVisualProgress += 0.12; 
-            updateUI(currentVisualProgress, "Assembling Data...");
-          }
-        }, 250);
       }
     </script>
   </body>
