@@ -25,7 +25,6 @@
         z-index: 99; transition: opacity 0.8s ease-out;
       }
 
-      /* Random Background Layer */
       #loader-bg-image {
         position: absolute; top: 0; left: 0;
         width: 100%; height: 100%;
@@ -53,7 +52,6 @@
         transition: width 0.4s ease-out;
       }
 
-      /* Game Area */
       #clicker-game {
         display: flex; align-items: flex-end; justify-content: center;
         gap: 25px; position: relative; margin-bottom: 10px; padding-bottom: 20px;
@@ -68,16 +66,15 @@
         cursor: pointer; user-select: none; position: relative;
       }
 
-      /* SEPARATE SIZING FOR IMAGES */
       .img-normal {
-        width: 62px; /* Adjust this for the 1st image */
+        width: 62px;
         height: 60px;
         object-fit: contain;
         transition: transform 0.1s ease;
       }
 
       .img-empty {
-        width: 60px; /* Adjust this for the 2nd image */
+        width: 60px;
         height: 60px;
         object-fit: contain;
         transition: transform 0.1s ease;
@@ -89,7 +86,6 @@
         text-shadow: 2px 2px #000;
       }
 
-      /* Floating Effects */
       .floating-effect {
         position: absolute; width: 100%; text-align: center;
         top: -20px; font-family: 'Courier New', monospace;
@@ -129,13 +125,11 @@
 
     <div id="unity-loader-ready">
       <div id="loader-bg-image"></div>
-      
       <div id="loader-text">Warping to World... 0%</div>
       <div id="loader-bar"><div id="loader-fill"></div></div>
 
       <div id="clicker-game">
         <img id="mario-animation" src="https://s13.gifyu.com/images/bm99v.gif" alt="Mario">
-        
         <div id="block-container" onclick="hitBlock()">
             <img id="q-block" class="img-normal" src="https://i.ibb.co/WWzWdQ3s/image.png" alt="Block">
             <div id="coin-score">x0</div>
@@ -162,15 +156,13 @@
       const fullscreenBtn = document.querySelector("#fullscreen-button");
 
       let coins = 0;
-      const imgNormal = "https://i.ibb.co/WWzWdQ3s/image.png";
-      const imgEmpty = "https://i.ibb.co/W4smBnxF/image.png";
+      let currentVisualProgress = 0;
+      let fakeProgressInterval = null;
 
       function hitBlock() {
         coins++;
         coinScoreDisp.innerHTML = "x" + coins;
-
-        // Visual Swap and Sizing
-        qBlock.src = imgEmpty;
+        qBlock.src = "https://i.ibb.co/W4smBnxF/image.png";
         qBlock.className = "img-empty";
         qBlock.style.transform = "translateY(-12px)";
         
@@ -188,7 +180,7 @@
         }
 
         setTimeout(() => {
-          qBlock.src = imgNormal;
+          qBlock.src = "https://i.ibb.co/WWzWdQ3s/image.png";
           qBlock.className = "img-normal";
           qBlock.style.transform = "translateY(0)";
           coinEl.remove();
@@ -201,19 +193,12 @@
       const marioFacts = [
         "Mario's first appearance was in Donkey Kong (1981) as 'Jumpman'.",
         "The mushroom power-up is based on the real Amanita Muscaria fungus.",
-        "Mario's hat was added to avoid animating hair movements.",
         "The clouds and bushes in Super Mario Bros. are the same sprite!",
         "Luigi was originally a palette-swap of Mario for the 2nd player.",
-        "Bowser was originally designed as an ox before becoming a turtle-dragon.",
         "Wario's name comes from 'warui', the Japanese word for 'bad'.",
-        "Chain Chomps were inspired by a dog from Miyamoto's childhood.",
         "Mario's mustache was used to make his nose stand out in 8-bit.",
-        "Super Mario World was the first game to feature Yoshi.",
         "Mario Mario and Luigi Mario—that's their official full names!",
-        "The 1-Up sound is one of the most recognizable in gaming history.",
-        "Mario was originally a carpenter before becoming a plumber.",
-        "Koji Kondo composed the iconic theme officially called 'Ground Theme'.",
-        "The 1-Up Mushroom was originally orange and white in the arcade version."
+        "The 1-Up sound is one of the most recognizable in gaming history."
       ];
 
       let factIndex = 0;
@@ -226,24 +211,38 @@
         }, 500);
       }, 3000);
 
-// Update this part in your createUnityInstance call
-      (progress) => {
+      // --- THE CORE UNITY LOADING CALL ---
+      createUnityInstance(document.querySelector("#unity-canvas"), {
+        arguments: [],
+        dataUrl: "Build/MarioVsLuigi-WebGL.data.unityweb",
+        frameworkUrl: "Build/MarioVsLuigi-WebGL.framework.js.unityweb",
+        codeUrl: "Build/MarioVsLuigi-WebGL.wasm.unityweb",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "ipodtouch0218",
+        productName: "NSMB-MarioVsLuigi",
+        productVersion: "2.0.4.1",
+      }, (progress) => {
         if (progress < 0.9) {
-          // This maps the first 90% of real loading to 0-85% on your bar
           currentVisualProgress = (progress / 0.9) * 85; 
           updateUI(currentVisualProgress, "Downloading...");
-        } 
-        else if (progress >= 0.9 && !fakeProgressInterval) {
-          // When Unity hits 90%, we start the slow crawl to 95%
+        } else if (progress >= 0.9 && !fakeProgressInterval) {
           startSlowCrawl();
         }
-      }
+      }).then((unityInstance) => {
+        clearInterval(fakeProgressInterval);
+        updateUI(100, "Ready!");
+        fullscreenBtn.style.display = "block";
+        fullscreenBtn.onclick = () => { unityInstance.SetFullscreen(1); };
+        setTimeout(() => {
+          loaderContainer.style.opacity = "0";
+          setTimeout(() => { loaderContainer.style.display = "none"; }, 1000);
+        }, 1200);
+      });
 
-      // Update this function to cap at 95%
       function startSlowCrawl() {
         fakeProgressInterval = setInterval(() => {
-          if (currentVisualProgress < 95) { // Change this from 98 to 95
-            currentVisualProgress += 0.05; // Make it move slowly
+          if (currentVisualProgress < 95) {
+            currentVisualProgress += 0.05;
             updateUI(currentVisualProgress, "Assembling Data...");
           }
         }, 200);
