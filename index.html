@@ -5,16 +5,12 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity Web Player | NSMB-MarioVsLuigi</title>
     <style>
-      /* Prevent scrollbars and center everything */
       body { padding: 0; border: 0; margin: 0; text-align: center; background: #000; overflow: hidden; }
       
-      /* The Loading Overlay */
       #unity-loader-ready {
         position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
         background: #111;
         display: flex;
         flex-direction: column;
@@ -23,45 +19,45 @@
         z-index: 99;
       }
 
-      /* The Loading Bar Container */
       #loader-bar {
-        width: 250px;
-        height: 10px;
+        width: 300px;
+        height: 4px;
         background: #333;
-        border-radius: 5px;
+        border-radius: 10px;
         overflow: hidden;
         margin-top: 20px;
       }
 
-      /* The Moving Fill */
       #loader-fill {
         width: 0%;
         height: 100%;
-        background: #e50914; /* Mario Red */
-        transition: width 0.2s;
+        background: #ff0000; /* Mario Red */
+        box-shadow: 0 0 10px #ff0000;
+        transition: width 0.4s ease-out;
       }
 
       #loader-text {
-        color: white;
-        font-family: sans-serif;
-        font-size: 14px;
-        letter-spacing: 1px;
+        color: #ccc;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 12px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
       }
     </style>
   </head>
   <body>
+
     <div id="unity-loader-ready">
-      <div id="loader-text">LOADING... 0%</div>
+      <div id="loader-text">Initializing... 0%</div>
       <div id="loader-bar">
         <div id="loader-fill"></div>
       </div>
     </div>
 
-    <canvas id="unity-canvas" width=960 height=540 tabindex="-1" style="width: 100%; height: 100%; background: #CCCCCC"></canvas>
+    <canvas id="unity-canvas" width=960 height=540 tabindex="-1" style="width: 100%; height: 100%; background: #000"></canvas>
 
     <script src="Build/MarioVsLuigi-WebGL.loader.js"></script>
     <script>
-      // Elements for the loader
       const loaderContainer = document.querySelector("#unity-loader-ready");
       const loaderFill = document.querySelector("#loader-fill");
       const loaderText = document.querySelector("#loader-text");
@@ -71,16 +67,13 @@
         meta.name = 'viewport';
         meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
         document.getElementsByTagName('head')[0].appendChild(meta);
-
         var canvas = document.querySelector("#unity-canvas");
         canvas.style.width = "100%";
         canvas.style.height = "100%";
         canvas.style.position = "fixed";
-
         document.body.style.textAlign = "left";
       }
 
-      // Updated createUnityInstance with progress and success callbacks
       createUnityInstance(document.querySelector("#unity-canvas"), {
         arguments: [],
         dataUrl: "Build/MarioVsLuigi-WebGL.data.unityweb",
@@ -91,15 +84,34 @@
         productName: "NSMB-MarioVsLuigi",
         productVersion: "2.0.4.1",
       }, (progress) => {
-        // Update the bar and text
-        const percentage = Math.round(progress * 100);
-        loaderFill.style.width = percentage + "%";
-        loaderText.innerHTML = "LOADING... " + percentage + "%";
+        let visualProgress = 0;
+
+        if (progress < 0.9) {
+          // 1. Downloading Phase: Maps Unity 0-90% to Visual 0-75%
+          visualProgress = (progress / 0.9) * 0.75;
+          loaderText.innerHTML = "Downloading Assets... " + Math.round(visualProgress * 100) + "%";
+        } else {
+          // 2. Processing Phase: Maps Unity 90-100% to Visual 75-95%
+          // This makes the last bit crawl slowly instead of jumping
+          visualProgress = 0.75 + ((progress - 0.9) / 0.1) * 0.20;
+          loaderText.innerHTML = "Processing Data... " + Math.round(visualProgress * 100) + "%";
+        }
+
+        loaderFill.style.width = (visualProgress * 100) + "%";
+
       }).then((unityInstance) => {
-        // Remove the loader when finished
-        loaderContainer.style.display = "none";
+        // 3. Completion Phase: Snap to 100% and hide
+        loaderFill.style.width = "100%";
+        loaderText.innerHTML = "Ready!";
+        
+        // Brief delay so user sees "100%" before it vanishes
+        setTimeout(() => {
+          loaderContainer.style.display = "none";
+        }, 500);
+
       }).catch((message) => {
-        alert("Error loading game: " + message);
+        loaderText.innerHTML = "Error occurred";
+        console.error(message);
       });
     </script>
   </body>
