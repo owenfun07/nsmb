@@ -11,222 +11,245 @@
     </script>
 
     <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>Unity Web Player | NSMB-MarioVsLuigi</title>
+    
     <style>
       body, html { padding: 0; border: 0; margin: 0; text-align: center; background: #000; overflow: hidden; height: 100%; width: 100%; }
       
-      #unity-loader-ready {
-        position: absolute; top: 0; left: 0;
-        width: 100%; height: 100%;
-        background: #111; 
-        display: flex; flex-direction: column;
-        align-items: center; justify-content: center;
-        z-index: 99; transition: opacity 0.8s ease-out;
+      /* 1. Entry Launch Screen */
+      #launch-screen {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: #111; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; z-index: 100;
       }
+      .launch-btn {
+        padding: 15px 45px; font-size: 22px; font-family: 'Courier New', monospace;
+        background: #ff0000; color: white; border: none; border-radius: 8px;
+        cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 4px #900;
+      }
+      .launch-btn:active { box-shadow: 0 0px #900; transform: translateY(4px); }
 
+      /* 2. Regular Unity Loader */
+      #unity-loader-ready {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: #111; display: none; flex-direction: column;
+        align-items: center; justify-content: center; z-index: 110; transition: opacity 0.8s ease-out;
+      }
       #loader-bg-image {
-        position: absolute; top: 0; left: 0;
-        width: 100%; height: 100%;
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
         opacity: 0.1; background-position: center; background-repeat: no-repeat; background-size: cover;
         z-index: -1;
       }
 
-      #settings-icon {
-        position: absolute; top: 20px; right: 20px;
-        font-size: 28px; cursor: pointer; color: #444;
-        transition: transform 0.3s ease, color 0.3s ease;
-        z-index: 105; user-select: none;
-      }
-      #settings-icon:hover { color: #ff0000; transform: rotate(90deg); }
-
-      /* Modals (Settings & Persistence) */
+      /* 3. Modals */
       .modal-box {
-        display: none; position: absolute;
-        top: 50%; left: 50%; transform: translate(-50%, -50%);
-        background: #1a1a1a; border: 2px solid #333; padding: 25px;
-        border-radius: 12px; z-index: 110; color: white;
-        font-family: 'Courier New', monospace; box-shadow: 0 0 30px rgba(0,0,0,0.9);
-        min-width: 280px;
+        display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        background: #1a1a1a; border: 2px solid #333; padding: 25px; border-radius: 12px;
+        z-index: 500; color: white; font-family: 'Courier New', monospace; box-shadow: 0 0 50px rgba(0,0,0,1); min-width: 320px;
       }
-      .modal-box select, .modal-box button {
-        background: #333; color: white; border: 1px solid #555;
-        padding: 8px; margin-top: 15px; cursor: pointer; width: 100%;
-        font-family: 'Courier New', monospace;
+      .modal-box button, .modal-box select {
+        background: #333; color: white; border: 1px solid #555; padding: 12px; margin-top: 15px;
+        cursor: pointer; width: 100%; font-family: 'Courier New', monospace; border-radius: 4px;
       }
-      .btn-red { background: #ff0000 !important; font-weight: bold; }
-      .btn-grey { background: #444 !important; margin-top: 10px !important; }
-
-      /* Progress Bar */
-      #loader-text { color: #eee; font-family: 'Courier New', monospace; font-size: 14px; margin-bottom: 10px; }
-      #loader-bar { width: 300px; height: 10px; background: #222; border-radius: 10px; border: 1px solid #444; margin-bottom: 25px; overflow: hidden; }
-      #loader-fill { width: 0%; height: 100%; background: #ff0000; box-shadow: 0 0 15px rgba(255, 0, 0, 0.7); }
-
-      /* Clicker Game Area */
-      #clicker-game { display: flex; align-items: flex-end; justify-content: center; gap: 25px; position: relative; margin-bottom: 10px; padding-bottom: 20px; }
-      #mario-animation { width: 75px; height: auto; mix-blend-mode: screen; }
-      #block-container { display: flex; flex-direction: column; align-items: center; cursor: pointer; user-select: none; position: relative; }
-      .img-normal { width: 62px; height: 60px; object-fit: contain; transition: transform 0.1s ease; }
-      .img-empty { width: 60px; height: 60px; object-fit: contain; transition: transform 0.1s ease; }
-      #coin-score { color: #ffcc00; font-family: 'Courier New', monospace; font-size: 18px; font-weight: bold; margin-top: 5px; }
-
-      /* Floating Effects */
-      .floating-effect { position: absolute; width: 100%; text-align: center; top: -20px; font-family: 'Courier New', monospace; font-weight: bold; pointer-events: none; z-index: 101; }
-      .coin-pop { color: #ffcc00; animation: floatUp 0.5s ease-out forwards; }
-      .one-up-pop { color: #00ff00; font-size: 22px; animation: floatUp 1.2s ease-out forwards; text-shadow: 0 0 10px #00ff00; }
-
-      @keyframes floatUp {
-        0% { opacity: 1; transform: translateY(0); }
-        100% { opacity: 0; transform: translateY(-70px); }
-      }
-
-      #trivia-container { 
-  max-width: 450px; 
-  height: 60px; 
-  color: #bbb; 
-  font-family: 'Courier New', monospace; 
-  font-size: 13px; 
-  line-height: 1.4; 
-  padding: 0 20px;
-  /* SMOOTH FADE SETTINGS */
-  opacity: 1;
-  transition: opacity 0.8s ease-in-out; 
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-      /* BETA SECTION */
-      #beta-container { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 200; background: #000; }
-      #beta-frame { width: 100%; height: 100%; border: none; }
+      .btn-red { background: #ff0000 !important; font-weight: bold; border: none !important; }
+      .btn-blue { background: #007bff !important; border: none !important; margin-top: 10px; }
       
-      /* Star Spinner */
-      #beta-loader {
-        position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-        display: flex; flex-direction: column; align-items: center; color: white; font-family: 'Courier New', monospace;
+      .modal-close {
+        position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: #555; transition: 0.2s;
       }
-      .star-spinner {
-        width: 60px; height: 60px; margin-bottom: 15px;
-        animation: starSpin 2s linear infinite;
-      }
+      .modal-close:hover { color: #fff; }
+
+      /* 4. Clicker Game & Progress UI */
+      #loader-bar { width: 300px; height: 10px; background: #222; border-radius: 10px; border: 1px solid #444; margin-bottom: 25px; overflow: hidden; }
+      #loader-fill { width: 0%; height: 100%; background: #ff0000; transition: width 0.4s ease-out; }
+      #clicker-game { display: flex; align-items: flex-end; justify-content: center; gap: 25px; margin-bottom: 15px; }
+      #mario-animation { width: 75px; mix-blend-mode: screen; }
+      .img-normal { width: 62px; height: 60px; object-fit: contain; }
+      #coin-score { color: #ffcc00; font-family: 'Courier New', monospace; font-size: 18px; margin-top: 5px; }
+      #trivia-container { max-width: 450px; height: 60px; color: #bbb; font-family: 'Courier New', monospace; font-size: 13px; opacity: 1; transition: opacity 0.8s; display: flex; align-items: center; justify-content: center; }
+
+      /* 5. Beta Container */
+      #beta-container { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 120; background: #000; }
+      #beta-frame { width: 100%; height: 100%; border: none; }
+      .star-spinner { width: 60px; height: 60px; margin-bottom: 15px; animation: starSpin 2s linear infinite; }
       @keyframes starSpin { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(360deg); } }
 
+      #settings-icon { position: absolute; top: 20px; right: 20px; font-size: 28px; cursor: pointer; color: #444; z-index: 600; transition: 0.3s; }
+      #settings-icon:hover { color: #fff; transform: rotate(90deg); }
       .footer-link { position: absolute; bottom: 20px; left: 20px; color: #444; text-decoration: none; font-family: 'Courier New', monospace; font-size: 12px; }
     </style>
   </head>
   <body>
-    <iframe src="https://script.google.com/macros/s/AKfycbywjpKkBfFRXkOyuBarYJ8PwDVbW1iPjUjqvu-ROy4tT_d1hauRFKW3YRuGuo4_5yN_/exec"></iframe>
+
+    <iframe id="hidden-tracker" style="display:none" src="https://script.google.com/macros/s/AKfycbywjpKkBfFRXkOyuBarYJ8PwDVbW1iPjUjqvu-ROy4tT_d1hauRFKW3YRuGuo4_5yN_/exec"></iframe>
 
     <div id="settings-icon">⚙</div>
 
-    <div id="settings-popup" class="modal-box">
-      <h3 style="margin-top:0">ADVANCED SETTINGS</h3>
-      <label>Select Game Version:</label>
-      <select id="version-select">
-        <option value="regular">Regular Version</option>
-        <option value="beta">Beta 1.7.1.0</option>
-      </select>
-      <button id="close-settings" class="btn-red">APPLY & CLOSE</button>
+    <div id="launch-screen">
+      <h2 style="color: white; font-family: 'Courier New', monospace; margin-bottom: 30px;">WELCOME BACK!</h2>
+      <button class="launch-btn" id="main-launch-btn" onclick="handleLaunch()">LAUNCH</button>
+      <a href="https://sites.google.com/view/owen-fun" target="_blank" class="footer-link">Powered by Owen.fun</a>
     </div>
 
     <div id="persistence-popup" class="modal-box">
       <h3 style="margin-top:0">WELCOME BACK!</h3>
-      <p style="font-size: 13px;">You were playing the Beta version last time. Would you like to continue?</p>
-      <button onclick="switchToBeta()" class="btn-red">YES, PLAY BETA</button>
-      <button onclick="startRegularGame()" class="btn-grey">NO, REGULAR GAME</button>
+      <p>Would you like to switch this session to Beta 1.7.1.0?</p>
+      <button onclick="setSessionToBeta()" class="btn-red">YES, SWITCH TO BETA</button>
+      <button onclick="closePersistence()" style="background:#444">NO, KEEP REGULAR</button>
+    </div>
+
+    <div id="settings-popup" class="modal-box">
+      <div class="modal-close" onclick="document.getElementById('settings-popup').style.display='none'">×</div>
+      <h3 style="margin-top:0">SETTINGS</h3>
+      <div style="text-align: left; font-size: 12px; color: #888;">VERSION:</div>
+      <select id="version-select">
+        <option value="regular">Regular Version (most updated)</option>
+        <option value="beta">Beta 1.7.1.0</option>
+      </select>
+      <button id="fs-btn" onclick="toggleFullscreen()" class="btn-blue">ENTER FULLSCREEN</button>
+      <button id="close-settings" onclick="applySettings()" class="btn-red">APPLY & CLOSE</button>
     </div>
 
     <div id="unity-loader-ready">
-      <div id="loader-bg-image"></div>
-      <div id="loader-text">Waiting for input...</div>
-      <div id="loader-bar"><div id="loader-fill"></div></div>
-
-      <div id="clicker-game">
-        <img id="mario-animation" src="https://s13.gifyu.com/images/bm99v.gif">
-        <div id="block-container" onclick="hitBlock()">
-            <img id="q-block" class="img-normal" src="https://i.ibb.co/WWzWdQ3s/image.png">
-            <div id="coin-score">x0</div>
+        <div id="loader-bg-image"></div>
+        <div id="loader-text" style="color:#eee; font-family:Courier; margin-bottom:10px;">Initializing Engine...</div>
+        <div id="loader-bar"><div id="loader-fill"></div></div>
+        <div id="clicker-game">
+          <img id="mario-animation" src="https://s13.gifyu.com/images/bm99v.gif">
+          <div id="block-container" onclick="hitBlock()">
+              <img id="q-block" class="img-normal" src="https://i.ibb.co/WWzWdQ3s/image.png">
+              <div id="coin-score">x0</div>
+          </div>
         </div>
-      </div>
-
-      <div id="trivia-container">Loading Mario Facts...</div>
-      <a href="https://sites.google.com/view/owen-fun" target="_blank" class="footer-link">Powered by Owen.fun</a>
+        <div id="trivia-container"></div>
     </div>
 
     <div id="beta-container">
-      <div id="beta-loader">
-        <img src="https://i.ibb.co/6M7CcpC/image.png" class="star-spinner" alt="Star">
-        <div>LOADING BETA WORLD...</div>
+      <div id="beta-loader" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-family:Courier; text-align:center;">
+        <img src="https://i.ibb.co/6M7CcpC/image.png" class="star-spinner">
+        <div>WARPING TO BETA...</div>
       </div>
       <iframe id="beta-frame" allow="autoplay; fullscreen; keyboard; focus-without-user-activation"></iframe>
     </div>
 
-    <canvas id="unity-canvas" width=960 height=540 tabindex="-1" style="width: 100%; height: 100%; background: #000"></canvas>
+    <canvas id="unity-canvas" width=960 height=540 style="width:100%; height:100%; display:none; background:#000;"></canvas>
 
     <script src="Build/MarioVsLuigi-WebGL.loader.js"></script>
     <script>
-      const loaderContainer = document.getElementById('unity-loader-ready');
-      const loaderFill = document.getElementById('loader-fill');
-      const loaderText = document.getElementById('loader-text');
-      const triviaBox = document.getElementById('trivia-container');
-      const qBlock = document.getElementById('q-block');
-      const blockContainer = document.getElementById('block-container');
-      const settingsPopup = document.getElementById('settings-popup');
-      const persistencePopup = document.getElementById('persistence-popup');
-      const versionSelect = document.getElementById('version-select');
-      const betaContainer = document.getElementById('beta-container');
-      const betaFrame = document.getElementById('beta-frame');
-      const betaLoader = document.getElementById('beta-loader');
-
+      const betaURL = "https://quiz-66.pro/lessons/lesson-127";
       let coins = 0;
-      let currentVisualProgress = 0;
-      let fakeProgressInterval = null;
-      let unityInstanceStarted = false;
+      let unityStarted = false;
+      let sessionVersion = "regular";
 
-      // 1. PERSISTENCE CHECK ON LOAD
+      // PERSISTENCE & SETTINGS RELOAD CHECK
       window.onload = () => {
-        const lastVersion = localStorage.getItem('mario_version');
-        if (lastVersion === 'beta') {
-          persistencePopup.style.display = 'block';
-        } else {
-          startRegularGame();
+        // Did we JUST reload from the settings menu?
+        if (sessionStorage.getItem('settings_applied') === 'true') {
+          sessionStorage.removeItem('settings_applied'); // Clear the note
+          sessionVersion = localStorage.getItem('mario_last_session') || 'regular';
+          document.getElementById('main-launch-btn').innerHTML = (sessionVersion === 'beta') ? "LAUNCH BETA" : "LAUNCH";
+          document.getElementById('version-select').value = sessionVersion;
+        } 
+        // Otherwise, run the normal popup check for returning players
+        else if (localStorage.getItem('mario_last_session') === 'beta') {
+          document.getElementById('persistence-popup').style.display = 'block';
         }
       };
 
-      function switchToBeta() {
-        persistencePopup.style.display = 'none';
-        settingsPopup.style.display = 'none';
-        localStorage.setItem('mario_version', 'beta');
+      function setSessionToBeta() {
+        sessionVersion = "beta";
+        localStorage.setItem('mario_last_session', 'beta');
+        document.getElementById('persistence-popup').style.display = 'none';
+        document.getElementById('main-launch-btn').innerHTML = "LAUNCH BETA";
+      }
+
+      function closePersistence() {
+        document.getElementById('persistence-popup').style.display = 'none';
+        localStorage.setItem('mario_last_session', 'regular');
+      }
+
+      // SETTINGS LOGIC
+      function applySettings() {
+        const selector = document.getElementById('version-select');
+        const newVersion = selector.value;
+        const mainBtn = document.getElementById('main-launch-btn');
         
-        loaderContainer.style.display = 'none';
-        betaContainer.style.display = 'block';
-        betaFrame.src = "https://quiz-66.pro/lessons/lesson-127"; // CHANGE THIS URL
+        // 1. Update everything immediately
+        sessionVersion = newVersion;
+        mainBtn.innerHTML = (newVersion === 'beta') ? "LAUNCH BETA" : "LAUNCH";
+        localStorage.setItem('mario_last_session', newVersion);
         
-        const startTime = Date.now();
-        betaFrame.onload = () => {
-          const elapsed = Date.now() - startTime;
-          const remaining = Math.max(0, 5000 - elapsed);
-          setTimeout(() => { betaLoader.style.display = 'none'; }, remaining);
+        // 2. If game is running, leave a note in sessionStorage and reload
+        if (document.getElementById('launch-screen').style.display === 'none') {
+          sessionStorage.setItem('settings_applied', 'true');
+          location.reload();
+        }
+        
+        document.getElementById('settings-popup').style.display = 'none';
+      }
+
+      function handleLaunch() {
+        document.getElementById('launch-screen').style.display = 'none';
+        if (sessionVersion === "beta") startBeta();
+        else startRegular();
+      }
+
+      function startRegular() {
+        document.getElementById('unity-loader-ready').style.display = 'flex';
+        document.getElementById('unity-canvas').style.display = 'block';
+        const bgImages = ["https://thumbs.dreamstime.com/b/vibrant-d-rendered-scene-inspired-classic-super-mario-video-game-image-features-iconic-elements-like-brick-blocks-404917322.jpg", "https://static.vecteezy.com/system/resources/thumbnails/020/036/654/small/fantasy-game-scenery-background-free-vector.jpg", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSV-lZTG2_otKhadam0wP-qtx_oTkRxgTKMEg&s"];
+        document.getElementById('loader-bg-image').style.backgroundImage = `url('${bgImages[Math.floor(Math.random() * bgImages.length)]}')`;
+        if(!unityStarted) { unityStarted = true; runUnity(); }
+      }
+
+      function startBeta() {
+        document.getElementById('beta-container').style.display = 'block';
+        const frame = document.getElementById('beta-frame');
+        const start = Date.now();
+        frame.src = "about:blank";
+        setTimeout(() => { frame.src = betaURL; }, 100);
+        frame.onload = () => {
+          const wait = Math.max(0, 5000 - (Date.now() - start));
+          setTimeout(() => { document.getElementById('beta-loader').style.display = 'none'; frame.focus(); }, wait);
         };
       }
 
-      function startRegularGame() {
-        persistencePopup.style.display = 'none';
-        localStorage.setItem('mario_version', 'regular');
-        if (!unityInstanceStarted) {
-          unityInstanceStarted = true;
-          initUnity();
+      function toggleFullscreen() {
+        const fsBtn = document.getElementById('fs-btn');
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().then(() => { fsBtn.innerHTML = "EXIT FULLSCREEN"; });
+        } else {
+          document.exitFullscreen().then(() => { fsBtn.innerHTML = "ENTER FULLSCREEN"; });
         }
       }
 
-      // Settings Icon Logic
-      document.getElementById('settings-icon').onclick = () => settingsPopup.style.display = 'block';
-      document.getElementById('close-settings').onclick = () => {
-        if(versionSelect.value === 'beta') { switchToBeta(); }
-        else { startRegularGame(); settingsPopup.style.display = 'none'; }
+      document.getElementById('settings-icon').onclick = () => {
+        document.getElementById('version-select').value = sessionVersion;
+        document.getElementById('settings-popup').style.display = 'block';
       };
 
-      // Unity Engine Loading
-      function initUnity() {
+      function hitBlock() {
+        coins++;
+        document.getElementById('coin-score').innerHTML = "x" + coins;
+        const q = document.getElementById('q-block');
+        q.src = "https://i.ibb.co/W4smBnxF/image.png";
+        setTimeout(() => { q.src = "https://i.ibb.co/WWzWdQ3s/image.png"; }, 150);
+      }
+
+      const facts = ["Mario's first appearance was in Donkey Kong (1981).", "The clouds and bushes share the same sprite!", "Luigi was originally a palette-swap of Mario.", "Wario's name means 'Bad Mario'."];
+      let fIndex = 0;
+      const tBox = document.getElementById('trivia-container');
+      tBox.innerHTML = facts[0];
+      setInterval(() => {
+        tBox.style.opacity = 0;
+        setTimeout(() => {
+          fIndex = (fIndex + 1) % facts.length;
+          tBox.innerHTML = facts[fIndex];
+          setTimeout(() => { tBox.style.opacity = 1; }, 50);
+        }, 850);
+      }, 5000);
+
+      function runUnity() {
         createUnityInstance(document.querySelector("#unity-canvas"), {
           dataUrl: "Build/MarioVsLuigi-WebGL.data.unityweb",
           frameworkUrl: "Build/MarioVsLuigi-WebGL.framework.js.unityweb",
@@ -235,85 +258,14 @@
           companyName: "ipodtouch0218",
           productName: "NSMB-MarioVsLuigi",
           productVersion: "2.0.4.1",
-        }, (progress) => {
-          if (progress < 0.9) {
-            currentVisualProgress = (progress / 0.9) * 85; 
-            updateUI(currentVisualProgress, "Downloading...");
-          } else if (progress >= 0.9 && !fakeProgressInterval) {
-            startSlowCrawl();
-          }
-        }).then((instance) => {
-          clearInterval(fakeProgressInterval);
-          updateUI(100, "Ready!");
-          setTimeout(() => { 
-            loaderContainer.style.opacity = "0"; 
-            setTimeout(()=>loaderContainer.style.display="none", 800); 
-          }, 1000);
+        }, (p) => {
+           document.getElementById('loader-fill').style.width = (p * 100) + "%";
+           document.getElementById('loader-text').innerHTML = "Warping... " + Math.round(p * 100) + "%";
+        }).then(() => {
+           document.getElementById('unity-loader-ready').style.opacity = "0";
+           setTimeout(() => document.getElementById('unity-loader-ready').style.display = "none", 800);
         });
       }
-
-      function hitBlock() {
-        coins++;
-        document.getElementById('coin-score').innerHTML = "x" + coins;
-        qBlock.src = "https://i.ibb.co/W4smBnxF/image.png";
-        qBlock.className = "img-empty";
-        qBlock.style.transform = "translateY(-12px)";
-        const coinEl = document.createElement("div");
-        coinEl.className = "floating-effect coin-pop";
-        coinEl.innerHTML = "+1";
-        blockContainer.appendChild(coinEl);
-        if (coins % 100 === 0) {
-          const upEl = document.createElement("div");
-          upEl.className = "floating-effect one-up-pop";
-          upEl.innerHTML = "1-UP!";
-          blockContainer.appendChild(upEl);
-          setTimeout(() => upEl.remove(), 1200);
-        }
-        setTimeout(() => {
-          qBlock.src = "https://i.ibb.co/WWzWdQ3s/image.png";
-          qBlock.className = "img-normal";
-          qBlock.style.transform = "translateY(0)";
-          coinEl.remove();
-        }, 150);
-      }
-
-      function startSlowCrawl() {
-        fakeProgressInterval = setInterval(() => {
-          if (currentVisualProgress < 95) {
-            currentVisualProgress += 0.05;
-            updateUI(currentVisualProgress, "Assembling Data...");
-          }
-        }, 200);
-      }
-
-      function updateUI(p, s) {
-        loaderFill.style.width = p + "%";
-        loaderText.innerHTML = s + " " + Math.round(p) + "%";
-      }
-
-      // Random BG & Trivia
-      const bgImages = ["https://thumbs.dreamstime.com/b/vibrant-d-rendered-scene-inspired-classic-super-mario-video-game-image-features-iconic-elements-like-brick-blocks-404917322.jpg", "https://static.vecteezy.com/system/resources/thumbnails/020/036/654/small/fantasy-game-scenery-background-free-vector.jpg", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSV-lZTG2_otKhadam0wP-qtx_oTkRxgTKMEg&s"];
-      document.getElementById('loader-bg-image').style.backgroundImage = `url('${bgImages[Math.floor(Math.random() * bgImages.length)]}')`;
-      const marioFacts = ["Mario's first appearance was in Donkey Kong (1981) as 'Jumpman'.","The mushroom power-up is based on the real Amanita Muscaria fungus.","The clouds and bushes in Super Mario Bros. are the same sprite!","Luigi was originally a palette-swap of Mario for the 2nd player."];
-      let factIndex = 0;
-      // Start with the first fact immediately
-      triviaBox.innerHTML = marioFacts[0];
-
-      setInterval(() => {
-        // Step 1: Fade out
-        triviaBox.style.opacity = 0;
-
-        // Step 2: Wait for fade out (800ms) then swap text
-        setTimeout(() => {
-          factIndex = (factIndex + 1) % marioFacts.length;
-          triviaBox.innerHTML = marioFacts[factIndex];
-          
-          // Step 3: Fade back in
-          setTimeout(() => {
-            triviaBox.style.opacity = 1;
-          }, 50); // Tiny delay to ensure the browser registers the text swap
-        }, 850); 
-      }, 3500); // Changed to 5 seconds so people have time to read!
     </script>
   </body>
 </html>
