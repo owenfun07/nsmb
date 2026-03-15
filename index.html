@@ -67,7 +67,7 @@
 
       /* 4. Clicker Game & Progress UI */
       #loader-bar { width: 300px; height: 10px; background: #222; border-radius: 10px; border: 1px solid #444; margin-bottom: 25px; overflow: hidden; }
-      #loader-fill { width: 0%; height: 100%; background: #ff0000; transition: width 0.4s ease-out; }
+      #loader-fill { width: 0%; height: 100%; background: #ff0000; transition: width 0.4s linear; }
       #clicker-game { display: flex; align-items: flex-end; justify-content: center; gap: 25px; margin-bottom: 15px; }
       #mario-animation { width: 75px; mix-blend-mode: screen; }
       .img-normal { width: 62px; height: 60px; object-fit: contain; }
@@ -223,7 +223,6 @@
         const versionChanged = (sessionVersion !== newVersion);
         const isGameRunning = (document.getElementById('launch-screen').style.display === 'none');
 
-        // Save Advanced Settings
         shouldSaveCoins = saveToggle.checked;
         localStorage.setItem('mario_save_coins', shouldSaveCoins);
         if(!shouldSaveCoins) {
@@ -253,7 +252,11 @@
       function startRegular() {
         document.getElementById('unity-loader-ready').style.display = 'flex';
         document.getElementById('unity-canvas').style.display = 'block';
-        const bgImages = ["https://thumbs.dreamstime.com/b/vibrant-d-rendered-scene-inspired-classic-super-mario-video-game-image-features-iconic-elements-like-brick-blocks-404917322.jpg", "https://static.vecteezy.com/system/resources/thumbnails/020/036/654/small/fantasy-game-scenery-background-free-vector.jpg", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSV-lZTG2_otKhadam0wP-qtx_oTkRxgTKMEg&s"];
+        const bgImages = [
+            "https://thumbs.dreamstime.com/b/vibrant-d-rendered-scene-inspired-classic-super-mario-video-game-image-features-iconic-elements-like-brick-blocks-404917322.jpg", 
+            "https://static.vecteezy.com/system/resources/thumbnails/020/036/654/small/fantasy-game-scenery-background-free-vector.jpg", 
+            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSV-lZTG2_otKhadam0wP-qtx_oTkRxgTKMEg&s",
+        ];
         document.getElementById('loader-bg-image').style.backgroundImage = `url('${bgImages[Math.floor(Math.random() * bgImages.length)]}')`;
         if(!unityStarted) { unityStarted = true; runUnity(); }
       }
@@ -288,24 +291,19 @@
       function hitBlock() {
         coins++;
         document.getElementById('coin-score').innerHTML = "x" + coins;
-        
-        if (shouldSaveCoins) {
-            localStorage.setItem('mario_saved_coin_count', coins);
-        }
+        if (shouldSaveCoins) localStorage.setItem('mario_saved_coin_count', coins);
 
         const container = document.getElementById('block-container');
         const q = document.getElementById('q-block');
         
         if (coins % 100 === 0) {
           const oneUp = document.createElement('div');
-          oneUp.className = 'one-up';
-          oneUp.innerHTML = '1-UP';
+          oneUp.className = 'one-up'; oneUp.innerHTML = '1-UP';
           container.appendChild(oneUp);
           setTimeout(() => { oneUp.remove(); }, 800);
         } else {
           const plusOne = document.createElement('div');
-          plusOne.className = 'plus-one';
-          plusOne.innerHTML = '+1';
+          plusOne.className = 'plus-one'; plusOne.innerHTML = '+1';
           container.appendChild(plusOne);
           setTimeout(() => { plusOne.remove(); }, 800);
         }
@@ -328,6 +326,9 @@
       }, 5000);
 
       function runUnity() {
+        let fakeProgress = 75;
+        let isFakeLoading = false;
+
         createUnityInstance(document.querySelector("#unity-canvas"), {
           dataUrl: "Build/MarioVsLuigi-WebGL.data.unityweb",
           frameworkUrl: "Build/MarioVsLuigi-WebGL.framework.js.unityweb",
@@ -337,12 +338,39 @@
           productName: "NSMB-MarioVsLuigi",
           productVersion: "2.0.4.1",
         }, (p) => {
-            document.getElementById('loader-fill').style.width = (p * 100) + "%";
-            document.getElementById('loader-text').innerHTML = "Warping... " + Math.round(p * 100) + "%";
+            // Logic: Once real download hits 75%, stop listening to real 'p' and start slow crawl
+            if (p >= 0.75 && !isFakeLoading) {
+              isFakeLoading = true;
+              startSlowCrawl();
+            } else if (!isFakeLoading) {
+              updateProgressUI(p);
+            }
         }).then(() => {
-            document.getElementById('unity-loader-ready').style.opacity = "0";
-            setTimeout(() => document.getElementById('unity-loader-ready').style.display = "none", 800);
+            // Once Unity is actually ready, jump to 100% and fade out
+            updateProgressUI(1);
+            setTimeout(() => {
+                document.getElementById('unity-loader-ready').style.opacity = "0";
+                setTimeout(() => document.getElementById('unity-loader-ready').style.display = "none", 800);
+            }, 500);
         });
+
+        function updateProgressUI(val) {
+          const percent = Math.round(val * 100);
+          document.getElementById('loader-fill').style.width = (val * 100) + "%";
+          document.getElementById('loader-text').innerHTML = "Warping... " + percent + "%";
+        }
+
+        function startSlowCrawl() {
+          // Takes exactly 15 seconds to go from 75% to 90%
+          const interval = setInterval(() => {
+            fakeProgress += 0.1;
+            if (fakeProgress >= 90) {
+              clearInterval(interval);
+              fakeProgress = 90;
+            }
+            updateProgressUI(fakeProgress / 100);
+          }, 100); // Increments slightly every 100ms
+        }
       }
     </script>
   </body>
