@@ -52,12 +52,18 @@
         cursor: pointer; width: 100%; font-family: 'Courier New', monospace; border-radius: 4px;
       }
       .btn-red { background: #ff0000 !important; font-weight: bold; border: none !important; }
-      .btn-blue { background: #007bff !important; border: none !important; margin-top: 10px; }
+      .btn-blue { background: #007bff !important; border: none !important; }
+      .btn-small { padding: 6px !important; font-size: 11px !important; margin-top: 10px !important; }
       
       .modal-close {
         position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; color: #555; transition: 0.2s;
       }
       .modal-close:hover { color: #fff; }
+
+      /* Settings Sub-sections */
+      .settings-section-title { font-size: 10px; color: #666; text-align: left; margin-top: 15px; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 3px; }
+      .setting-item { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; font-size: 13px; }
+      .setting-item input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; accent-color: #ff0000; }
 
       /* 4. Clicker Game & Progress UI */
       #loader-bar { width: 300px; height: 10px; background: #222; border-radius: 10px; border: 1px solid #444; margin-bottom: 25px; overflow: hidden; }
@@ -67,6 +73,22 @@
       .img-normal { width: 62px; height: 60px; object-fit: contain; }
       #coin-score { color: #ffcc00; font-family: 'Courier New', monospace; font-size: 18px; margin-top: 5px; }
       #trivia-container { max-width: 450px; height: 60px; color: #bbb; font-family: 'Courier New', monospace; font-size: 13px; opacity: 1; transition: opacity 0.8s; display: flex; align-items: center; justify-content: center; }
+
+      /* Floating Text Animations */
+      #block-container { position: relative; cursor: pointer; }
+      .plus-one, .one-up {
+        position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+        font-family: 'Courier New', monospace; font-weight: bold;
+        pointer-events: none; animation: floatUp 0.8s ease-out forwards;
+        z-index: 200;
+      }
+      .plus-one { color: #ffcc00; font-size: 16px; }
+      .one-up { color: #00ff00; font-size: 24px; text-shadow: 0 0 10px #000; }
+
+      @keyframes floatUp {
+        0% { transform: translate(-50%, 0); opacity: 1; }
+        100% { transform: translate(-50%, -60px); opacity: 0; }
+      }
 
       /* 5. Beta Container */
       #beta-container { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 120; background: #000; }
@@ -101,13 +123,23 @@
     <div id="settings-popup" class="modal-box">
       <div class="modal-close" onclick="document.getElementById('settings-popup').style.display='none'">×</div>
       <h3 style="margin-top:0">SETTINGS</h3>
-      <div style="text-align: left; font-size: 12px; color: #888;">VERSION:</div>
+      
+      <div class="settings-section-title">Version Control</div>
       <select id="version-select">
         <option value="regular">Regular Version (most updated)</option>
         <option value="beta">Beta 1.7.1.0</option>
       </select>
-      <button id="fs-btn" onclick="toggleFullscreen()" class="btn-blue">ENTER FULLSCREEN</button>
-      <button id="close-settings" onclick="applySettings()" class="btn-red">APPLY & CLOSE</button>
+
+      <div class="settings-section-title">Advanced</div>
+      <div class="setting-item">
+        <span>Save Loader Coins</span>
+        <input type="checkbox" id="save-coins-toggle">
+      </div>
+      
+      <button onclick="resetCoins()" class="btn-small" style="background:#444; width: 100%;">RESET SAVED COINS</button>
+      <button id="fs-btn" onclick="toggleFullscreen()" class="btn-blue btn-small" style="width: 100%;">FULLSCREEN MODE</button>
+
+      <button id="close-settings" onclick="applySettings()" class="btn-red" style="margin-top:20px;">APPLY & CLOSE</button>
     </div>
 
     <div id="unity-loader-ready">
@@ -140,17 +172,23 @@
       let coins = 0;
       let unityStarted = false;
       let sessionVersion = "regular";
+      let shouldSaveCoins = false;
 
-      // PERSISTENCE & SETTINGS RELOAD CHECK
       window.onload = () => {
-        // Did we JUST reload from the settings menu?
+        shouldSaveCoins = localStorage.getItem('mario_save_coins') === 'true';
+        document.getElementById('save-coins-toggle').checked = shouldSaveCoins;
+        
+        if (shouldSaveCoins) {
+          coins = parseInt(localStorage.getItem('mario_saved_coin_count')) || 0;
+          document.getElementById('coin-score').innerHTML = "x" + coins;
+        }
+
         if (sessionStorage.getItem('settings_applied') === 'true') {
-          sessionStorage.removeItem('settings_applied'); // Clear the note
+          sessionStorage.removeItem('settings_applied');
           sessionVersion = localStorage.getItem('mario_last_session') || 'regular';
           document.getElementById('main-launch-btn').innerHTML = (sessionVersion === 'beta') ? "LAUNCH BETA" : "LAUNCH";
           document.getElementById('version-select').value = sessionVersion;
         } 
-        // Otherwise, run the normal popup check for returning players
         else if (localStorage.getItem('mario_last_session') === 'beta') {
           document.getElementById('persistence-popup').style.display = 'block';
         }
@@ -168,24 +206,42 @@
         localStorage.setItem('mario_last_session', 'regular');
       }
 
-      // SETTINGS LOGIC
+      function resetCoins() {
+        if(confirm("Clear all your loader coins?")) {
+            coins = 0;
+            document.getElementById('coin-score').innerHTML = "x0";
+            localStorage.removeItem('mario_saved_coin_count');
+        }
+      }
+
       function applySettings() {
         const selector = document.getElementById('version-select');
+        const saveToggle = document.getElementById('save-coins-toggle');
         const newVersion = selector.value;
         const mainBtn = document.getElementById('main-launch-btn');
         
-        // 1. Update everything immediately
+        const versionChanged = (sessionVersion !== newVersion);
+        const isGameRunning = (document.getElementById('launch-screen').style.display === 'none');
+
+        // Save Advanced Settings
+        shouldSaveCoins = saveToggle.checked;
+        localStorage.setItem('mario_save_coins', shouldSaveCoins);
+        if(!shouldSaveCoins) {
+            localStorage.removeItem('mario_saved_coin_count');
+        } else {
+            localStorage.setItem('mario_saved_coin_count', coins);
+        }
+
         sessionVersion = newVersion;
         mainBtn.innerHTML = (newVersion === 'beta') ? "LAUNCH BETA" : "LAUNCH";
         localStorage.setItem('mario_last_session', newVersion);
-        
-        // 2. If game is running, leave a note in sessionStorage and reload
-        if (document.getElementById('launch-screen').style.display === 'none') {
+
+        if (versionChanged && isGameRunning) {
           sessionStorage.setItem('settings_applied', 'true');
           location.reload();
+        } else {
+          document.getElementById('settings-popup').style.display = 'none';
         }
-        
-        document.getElementById('settings-popup').style.display = 'none';
       }
 
       function handleLaunch() {
@@ -217,21 +273,43 @@
       function toggleFullscreen() {
         const fsBtn = document.getElementById('fs-btn');
         if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().then(() => { fsBtn.innerHTML = "EXIT FULLSCREEN"; });
+          document.documentElement.requestFullscreen().then(() => { fsBtn.innerHTML = "EXIT FS"; });
         } else {
-          document.exitFullscreen().then(() => { fsBtn.innerHTML = "ENTER FULLSCREEN"; });
+          document.exitFullscreen().then(() => { fsBtn.innerHTML = "FULLSCREEN MODE"; });
         }
       }
 
       document.getElementById('settings-icon').onclick = () => {
         document.getElementById('version-select').value = sessionVersion;
+        document.getElementById('save-coins-toggle').checked = shouldSaveCoins;
         document.getElementById('settings-popup').style.display = 'block';
       };
 
       function hitBlock() {
         coins++;
         document.getElementById('coin-score').innerHTML = "x" + coins;
+        
+        if (shouldSaveCoins) {
+            localStorage.setItem('mario_saved_coin_count', coins);
+        }
+
+        const container = document.getElementById('block-container');
         const q = document.getElementById('q-block');
+        
+        if (coins % 100 === 0) {
+          const oneUp = document.createElement('div');
+          oneUp.className = 'one-up';
+          oneUp.innerHTML = '1-UP';
+          container.appendChild(oneUp);
+          setTimeout(() => { oneUp.remove(); }, 800);
+        } else {
+          const plusOne = document.createElement('div');
+          plusOne.className = 'plus-one';
+          plusOne.innerHTML = '+1';
+          container.appendChild(plusOne);
+          setTimeout(() => { plusOne.remove(); }, 800);
+        }
+
         q.src = "https://i.ibb.co/W4smBnxF/image.png";
         setTimeout(() => { q.src = "https://i.ibb.co/WWzWdQ3s/image.png"; }, 150);
       }
@@ -259,11 +337,11 @@
           productName: "NSMB-MarioVsLuigi",
           productVersion: "2.0.4.1",
         }, (p) => {
-           document.getElementById('loader-fill').style.width = (p * 100) + "%";
-           document.getElementById('loader-text').innerHTML = "Warping... " + Math.round(p * 100) + "%";
+            document.getElementById('loader-fill').style.width = (p * 100) + "%";
+            document.getElementById('loader-text').innerHTML = "Warping... " + Math.round(p * 100) + "%";
         }).then(() => {
-           document.getElementById('unity-loader-ready').style.opacity = "0";
-           setTimeout(() => document.getElementById('unity-loader-ready').style.display = "none", 800);
+            document.getElementById('unity-loader-ready').style.opacity = "0";
+            setTimeout(() => document.getElementById('unity-loader-ready').style.display = "none", 800);
         });
       }
     </script>
