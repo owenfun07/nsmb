@@ -126,7 +126,10 @@
       
       <div class="settings-section-title">Version Control</div>
       <select id="version-select">
-        <option value="regular">Regular Version (most updated)</option>
+        <option value="regular">Regular Version (most updated) — v2.2.0.1</option>
+        <option value="v2.1.1.0">Version 2.1.1.0</option>
+        <option value="v2.1.0.1">Version 2.1.0.1</option>
+        <option value="v2.0.4.1">Version 2.0.4.1</option>
         <option value="beta">Beta 1.7.1.0</option>
       </select>
 
@@ -166,13 +169,68 @@
 
     <canvas id="unity-canvas" width=960 height=540 style="width:100%; height:100%; display:none; background:#000;"></canvas>
 
-    <script src="Build/MarioVsLuigi-WebGL.loader.js"></script>
+    <script id="unity-loader-script"></script>
     <script>
       const betaURL = "https://quiz-66.pro/lessons/lesson-127";
+      const VERSION_CONFIG = {
+        regular: {
+          label: "Regular Version (most updated)",
+          productVersion: "2.2.0.1",
+          basePath: "v2.2.0.1/"
+        },
+        "v2.1.1.0": {
+          label: "Version 2.1.1.0",
+          productVersion: "2.1.1.0",
+          basePath: "v2.1.1.0/"
+        },
+        "v2.1.0.1": {
+          label: "Version 2.1.0.1",
+          productVersion: "2.1.0.1",
+          basePath: "v2.1.0.1/"
+        },
+        "v2.0.4.1": {
+          label: "Version 2.0.4.1",
+          productVersion: "2.0.4.1",
+          basePath: ""
+        },
+        beta: {
+          label: "Beta 1.7.1.0",
+          productVersion: "1.7.1.0-beta",
+          basePath: "v1.7.1.0-beta/"
+        }
+      };
+
+      function normalizeSessionVersion(value) {
+        return VERSION_CONFIG[value] ? value : "regular";
+      }
+
       let coins = 0;
       let unityStarted = false;
-      let sessionVersion = "regular";
+      let sessionVersion = normalizeSessionVersion(localStorage.getItem('mario_last_session') || 'regular');
       let shouldSaveCoins = false;
+      let unityLoaderPromise = Promise.resolve();
+
+      function prepareUnityLoader(versionKey) {
+        if (versionKey === "beta") {
+          unityLoaderPromise = Promise.resolve();
+          return unityLoaderPromise;
+        }
+
+        const config = VERSION_CONFIG[versionKey] || VERSION_CONFIG.regular;
+        const loader = document.getElementById('unity-loader-script');
+
+        unityLoaderPromise = new Promise((resolve, reject) => {
+          loader.onload = () => resolve();
+          loader.onerror = () => reject(new Error("Could not load the Unity loader for " + config.productVersion));
+          loader.src = config.basePath + "Build/MarioVsLuigi-WebGL.loader.js";
+        });
+
+        return unityLoaderPromise;
+      }
+
+      prepareUnityLoader(sessionVersion).catch((error) => {
+        console.error(error);
+      });
 
       window.onload = () => {
         shouldSaveCoins = localStorage.getItem('mario_save_coins') === 'true';
@@ -185,7 +243,7 @@
 
         if (sessionStorage.getItem('settings_applied') === 'true') {
           sessionStorage.removeItem('settings_applied');
-          sessionVersion = localStorage.getItem('mario_last_session') || 'regular';
+          sessionVersion = normalizeSessionVersion(localStorage.getItem('mario_last_session') || 'regular');
           document.getElementById('main-launch-btn').innerHTML = (sessionVersion === 'beta') ? "LAUNCH BETA" : "LAUNCH";
           document.getElementById('version-select').value = sessionVersion;
         } 
@@ -231,26 +289,41 @@
             localStorage.setItem('mario_saved_coin_count', coins);
         }
 
-        sessionVersion = newVersion;
-        mainBtn.innerHTML = (newVersion === 'beta') ? "LAUNCH BETA" : "LAUNCH";
-        localStorage.setItem('mario_last_session', newVersion);
+        sessionVersion = normalizeSessionVersion(newVersion);
+        mainBtn.innerHTML = (sessionVersion === 'beta') ? "LAUNCH BETA" : "LAUNCH";
+        localStorage.setItem('mario_last_session', sessionVersion);
 
         if (versionChanged && isGameRunning) {
           sessionStorage.setItem('settings_applied', 'true');
           location.reload();
         } else {
+          prepareUnityLoader(sessionVersion).catch((error) => {
+            console.error(error);
+            alert("Could not load the selected Unity version.");
+          });
           document.getElementById('settings-popup').style.display = 'none';
         }
       }
 
       function handleLaunch() {
         document.getElementById('launch-screen').style.display = 'none';
-        if (sessionVersion === "beta") startBeta();
-        else startRegular();
+        if (sessionVersion === "beta") {
+          startBeta();
+        } else {
+          unityLoaderPromise
+            .then(startRegular)
+            .catch((error) => {
+              console.error(error);
+              document.getElementById('launch-screen').style.display = 'flex';
+              alert("Could not load the selected Unity version.");
+            });
+        }
       }
 
       function startRegular() {
         document.getElementById('unity-loader-ready').style.display = 'flex';
+        document.getElementById('loader-fill').style.width = "0%";
+        document.getElementById('loader-text').innerHTML = "Initializing Engine...";
         document.getElementById('unity-canvas').style.display = 'block';
         const bgImages = [
             "https://thumbs.dreamstime.com/b/vibrant-d-rendered-scene-inspired-classic-super-mario-video-game-image-features-iconic-elements-like-brick-blocks-404917322.jpg", 
@@ -328,15 +401,17 @@
       function runUnity() {
         let fakeProgress = 75;
         let isFakeLoading = false;
+        const config = VERSION_CONFIG[sessionVersion] || VERSION_CONFIG.regular;
+        const basePath = config.basePath;
 
         createUnityInstance(document.querySelector("#unity-canvas"), {
-          dataUrl: "Build/MarioVsLuigi-WebGL.data.unityweb",
-          frameworkUrl: "Build/MarioVsLuigi-WebGL.framework.js.unityweb",
-          codeUrl: "Build/MarioVsLuigi-WebGL.wasm.unityweb",
-          streamingAssetsUrl: "StreamingAssets",
+          dataUrl: basePath + "Build/MarioVsLuigi-WebGL.data.unityweb",
+          frameworkUrl: basePath + "Build/MarioVsLuigi-WebGL.framework.js.unityweb",
+          codeUrl: basePath + "Build/MarioVsLuigi-WebGL.wasm.unityweb",
+          streamingAssetsUrl: basePath + "StreamingAssets",
           companyName: "ipodtouch0218",
           productName: "NSMB-MarioVsLuigi",
-          productVersion: "2.0.4.1",
+          productVersion: config.productVersion,
         }, (p) => {
             // Logic: Once real download hits 75%, stop listening to real 'p' and start slow crawl
             if (p >= 0.75 && !isFakeLoading) {
