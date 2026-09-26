@@ -98,6 +98,7 @@
 
       #settings-icon { position: absolute; top: 20px; right: 20px; font-size: 28px; cursor: pointer; color: #444; z-index: 600; transition: 0.3s; }
       #settings-icon:hover { color: #fff; transform: rotate(90deg); }
+      html:fullscreen #settings-icon { display: none; }
       .footer-link { position: absolute; bottom: 20px; left: 20px; color: #444; text-decoration: none; font-family: 'Courier New', monospace; font-size: 12px; }
     </style>
   </head>
@@ -115,8 +116,8 @@
 
     <div id="persistence-popup" class="modal-box">
       <h3 style="margin-top:0">WELCOME BACK!</h3>
-      <p>Would you like to switch this session to Beta 1.7.1.0?</p>
-      <button onclick="setSessionToBeta()" class="btn-red">YES, SWITCH TO BETA</button>
+      <p id="persistence-message">Would you like to switch this session to your last played version?</p>
+      <button id="persistence-yes" onclick="switchToLastPlayed()" class="btn-red">YES, SWITCH TO LAST VERSION</button>
       <button onclick="closePersistence()" style="background:#444">NO, KEEP REGULAR</button>
     </div>
 
@@ -198,6 +199,29 @@
         return VERSION_CONFIG[value] ? value : "regular";
       }
 
+      function updateLaunchButton() {
+        const btn = document.getElementById('main-launch-btn');
+        if (!btn) return;
+        if (sessionVersion === "beta") {
+          btn.innerHTML = "LAUNCH BETA";
+        } else if (sessionVersion === "regular") {
+          btn.innerHTML = "LAUNCH";
+        } else {
+          btn.innerHTML = "LAUNCH " + VERSION_CONFIG[sessionVersion].productVersion;
+        }
+      }
+
+      function showPersistencePopup(versionKey) {
+        const config = VERSION_CONFIG[versionKey];
+        if (!config || versionKey === "regular") return;
+
+        document.getElementById('persistence-message').innerHTML =
+          "Would you like to switch this session to " + config.label + "?";
+        document.getElementById('persistence-yes').innerHTML =
+          "YES, SWITCH TO " + config.productVersion;
+        document.getElementById('persistence-popup').style.display = 'block';
+      }
+
       let coins = 0;
       let unityStarted = false;
       let sessionVersion = normalizeSessionVersion(localStorage.getItem('mario_last_session') || 'regular');
@@ -238,24 +262,30 @@
         if (sessionStorage.getItem('settings_applied') === 'true') {
           sessionStorage.removeItem('settings_applied');
           sessionVersion = normalizeSessionVersion(localStorage.getItem('mario_last_session') || 'regular');
-          document.getElementById('main-launch-btn').innerHTML = (sessionVersion === 'beta') ? "LAUNCH BETA" : "LAUNCH";
+          updateLaunchButton();
           document.getElementById('version-select').value = sessionVersion;
-        } 
-        else if (localStorage.getItem('mario_last_session') === 'beta') {
-          document.getElementById('persistence-popup').style.display = 'block';
+        } else {
+          const lastPlayedVersion = normalizeSessionVersion(localStorage.getItem('mario_last_session') || 'regular');
+          sessionVersion = lastPlayedVersion;
+          document.getElementById('version-select').value = sessionVersion;
+          updateLaunchButton();
+          showPersistencePopup(lastPlayedVersion);
         }
       };
 
-      function setSessionToBeta() {
-        sessionVersion = "beta";
-        localStorage.setItem('mario_last_session', 'beta');
+      function switchToLastPlayed() {
+        sessionVersion = normalizeSessionVersion(localStorage.getItem('mario_last_session') || 'regular');
+        updateLaunchButton();
+        document.getElementById('version-select').value = sessionVersion;
         document.getElementById('persistence-popup').style.display = 'none';
-        document.getElementById('main-launch-btn').innerHTML = "LAUNCH BETA";
       }
 
       function closePersistence() {
-        document.getElementById('persistence-popup').style.display = 'none';
+        sessionVersion = "regular";
         localStorage.setItem('mario_last_session', 'regular');
+        updateLaunchButton();
+        document.getElementById('version-select').value = 'regular';
+        document.getElementById('persistence-popup').style.display = 'none';
       }
 
       function resetCoins() {
@@ -284,7 +314,7 @@
         }
 
         sessionVersion = normalizeSessionVersion(newVersion);
-        mainBtn.innerHTML = (sessionVersion === 'beta') ? "LAUNCH BETA" : "LAUNCH";
+        updateLaunchButton();
         localStorage.setItem('mario_last_session', sessionVersion);
 
         if (versionChanged && isGameRunning) {
@@ -340,14 +370,35 @@
         };
       }
 
-      function toggleFullscreen() {
+      function updateFullscreenUI() {
         const fsBtn = document.getElementById('fs-btn');
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().then(() => { fsBtn.innerHTML = "EXIT FS"; });
-        } else {
-          document.exitFullscreen().then(() => { fsBtn.innerHTML = "FULLSCREEN MODE"; });
+        const settingsIcon = document.getElementById('settings-icon');
+        const isFullscreen = !!document.fullscreenElement;
+
+        if (fsBtn) {
+          fsBtn.innerHTML = isFullscreen ? "EXIT FS" : "FULLSCREEN MODE";
+        }
+
+        if (settingsIcon) {
+          settingsIcon.style.display = isFullscreen ? "none" : "";
         }
       }
+
+      document.addEventListener('fullscreenchange', updateFullscreenUI);
+
+      function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch((error) => {
+            console.error("Fullscreen request failed:", error);
+          });
+        } else {
+          document.exitFullscreen().catch((error) => {
+            console.error("Exiting fullscreen failed:", error);
+          });
+        }
+      }
+
+      updateFullscreenUI();
 
       document.getElementById('settings-icon').onclick = () => {
         document.getElementById('version-select').value = sessionVersion;
