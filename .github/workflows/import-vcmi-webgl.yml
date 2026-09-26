@@ -1,0 +1,167 @@
+name: Import VCMI browser build
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  import-vcmi:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Playwright
+        run: |
+          npm init -y
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Discover and download VCMI WebGL build
+        env:
+          ITCH_URL: https://vlco-o.itch.io/vics-custom-match-inator
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const { chromium } = require('playwright');
+
+          (async () => {
+            const browser = await chromium.launch({
+              headless: true,
+              args: ['--disable-dev-shm-usage']
+            });
+            const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+            const urls = new Set();
+
+            page.on('response', (response) => {
+              const url = response.url();
+              if (url.includes('html-classic.itch.zone/html/') || url.includes('html.itch.zone/html/')) {
+                if (response.status() >= 200 && response.status() < 400) {
+                  urls.add(url);
+                }
+              }
+            });
+
+            console.log('Opening itch.io page...');
+            await page.goto(process.env.ITCH_URL, {
+              waitUntil: 'domcontentloaded',
+              timeout: 120000
+            });
+
+            console.log('Looking for the browser launch button...');
+            const launchers = [
+              page.getByText('Run mod', { exact: true }).first(),
+              page.getByText('Run game', { exact: true }).first(),
+              page.getByText('Play game', { exact: true }).first()
+            ];
+
+            let clicked = false;
+            for (const launcher of launchers) {
+              try {
+                if (await launcher.isVisible({ timeout: 3000 })) {
+                  await launcher.click();
+                  clicked = true;
+                  console.log('Clicked browser launch button.');
+                  break;
+                }
+              } catch (_) {}
+            }
+
+            if (!clicked) {
+              console.log('Could not click a launch button; checking if the embedded game is already present.');
+            }
+
+            await page.waitForTimeout(5000);
+
+            const frames = page.frames().map(f => f.url()).filter(Boolean);
+            console.log('Frames:');
+            for (const frame of frames) console.log(frame);
+
+            console.log('Waiting for browser build requests...');
+            await page.waitForTimeout(60000);
+
+            fs.writeFileSync('/tmp/vcmi_urls.txt', [...urls].sort().join('\n') + '\n');
+            console.log('Captured ' + urls.size + ' CDN responses.');
+            console.log(fs.readFileSync('/tmp/vcmi_urls.txt', 'utf8'));
+
+            await browser.close();
+          })().catch((err) => {
+            console.error(err);
+            process.exit(1);
+          });
+          NODE
+
+          if [ ! -s /tmp/vcmi_urls.txt ]; then
+            echo "No VCMI HTML5 CDN resources were discovered."
+            exit 1
+          fi
+
+          mkdir -p vcmi-v20.0.2
+
+          python3 - <<'PY'
+          from urllib.parse import urlparse, unquote
+          from pathlib import Path
+          import subprocess
+
+          urls = [u.strip() for u in Path('/tmp/vcmi_urls.txt').read_text().splitlines() if u.strip()]
+          downloads = {}
+
+          for u in urls:
+              parsed = urlparse(u)
+              path = unquote(parsed.path)
+              marker = '/html/'
+              if marker not in path:
+                  continue
+              rel = path.split(marker, 1)[1]
+              # Strip the numeric upload directory so the downloaded build keeps
+              # the same relative layout as the original HTML5 upload.
+              parts = rel.split('/', 1)
+              if len(parts) != 2:
+                  continue
+              rel = parts[1]
+              if not rel or rel.endswith('/'):
+                  continue
+              downloads[rel] = u
+
+          print(f'Preparing {len(downloads)} unique files...')
+          for rel, u in sorted(downloads.items()):
+              dest = Path('vcmi-v20.0.2') / rel
+              dest.parent.mkdir(parents=True, exist_ok=True)
+              print(f'Downloading {rel}')
+              subprocess.run([
+                  'curl', '-L', '--fail', '--retry', '3', '--retry-delay', '2',
+                  '-o', str(dest), u
+              ], check=True)
+
+          print('Downloaded files:')
+          for p in sorted(Path('vcmi-v20.0.2').rglob('*')):
+              if p.is_file():
+                  print(f'{p.stat().st_size:>12}  {p}')
+          PY
+
+      - name: Verify browser build files
+        run: |
+          test -f vcmi-v20.0.2/index.html
+          test -n "$(find vcmi-v20.0.2 -type f | wc -l)"
+          echo "VCMI browser build imported:"
+          find vcmi-v20.0.2 -type f | sort | head -200
+
+      - name: Remove temporary workflow and commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/import-vcmi-webgl.yml
+          git add vcmi-v20.0.2 .github/workflows/import-vcmi-webgl.yml
+          git commit -m "Add Vic's Custom Match-inator browser build"
+          git push
