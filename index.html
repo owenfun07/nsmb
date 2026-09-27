@@ -99,6 +99,15 @@
       #settings-icon { position: absolute; top: 20px; right: 20px; font-size: 28px; cursor: pointer; color: #444; z-index: 600; transition: 0.3s; }
       #settings-icon:hover { color: #fff; transform: rotate(90deg); }
       html:fullscreen #settings-icon { display: none; }
+      #unity-canvas.vcmi-canvas {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: min(100vw, calc(100vh * 16 / 9));
+        height: min(100vh, calc(100vw * 9 / 16));
+        display: block;
+      }
       .footer-link { position: absolute; bottom: 20px; left: 20px; color: #444; text-decoration: none; font-family: 'Courier New', monospace; font-size: 12px; }
     </style>
   </head>
@@ -130,6 +139,7 @@
         <option value="regular">Regular Version (most updated) — v2.2.0.1</option>
         <option value="v2.1.1.0">Version 2.1.1.0</option>
         <option value="v2.1.0.1">Version 2.1.0.1</option>
+        <option value="vcmi">Vic's Custom Match-inator v20.0.2</option>
         <option value="beta">Beta 1.7.1.0</option>
       </select>
 
@@ -176,22 +186,52 @@
         regular: {
           label: "Regular Version (most updated)",
           productVersion: "2.2.0.1",
-          basePath: "v2.2.0.1/"
+          basePath: "v2.2.0.1/",
+          loaderPath: "v2.2.0.1/Build/MarioVsLuigi-WebGL.loader.js",
+          dataPath: "v2.2.0.1/Build/MarioVsLuigi-WebGL.data.unityweb",
+          frameworkPath: "v2.2.0.1/Build/MarioVsLuigi-WebGL.framework.js.unityweb",
+          codePath: "v2.2.0.1/Build/MarioVsLuigi-WebGL.wasm.unityweb",
+          streamingAssetsUrl: "v2.2.0.1/StreamingAssets"
         },
         "v2.1.1.0": {
           label: "Version 2.1.1.0",
           productVersion: "2.1.1.0",
-          basePath: "v2.1.1.0/"
+          basePath: "v2.1.1.0/",
+          loaderPath: "v2.1.1.0/Build/MarioVsLuigi-WebGL.loader.js",
+          dataPath: "v2.1.1.0/Build/MarioVsLuigi-WebGL.data.unityweb",
+          frameworkPath: "v2.1.1.0/Build/MarioVsLuigi-WebGL.framework.js.unityweb",
+          codePath: "v2.1.1.0/Build/MarioVsLuigi-WebGL.wasm.unityweb",
+          streamingAssetsUrl: "v2.1.1.0/StreamingAssets"
         },
         "v2.1.0.1": {
           label: "Version 2.1.0.1",
           productVersion: "2.1.0.1",
-          basePath: "v2.1.0.1/"
+          basePath: "v2.1.0.1/",
+          loaderPath: "v2.1.0.1/Build/MarioVsLuigi-WebGL.loader.js",
+          dataPath: "v2.1.0.1/Build/MarioVsLuigi-WebGL.data.unityweb",
+          frameworkPath: "v2.1.0.1/Build/MarioVsLuigi-WebGL.framework.js.unityweb",
+          codePath: "v2.1.0.1/Build/MarioVsLuigi-WebGL.wasm.unityweb",
+          streamingAssetsUrl: "v2.1.0.1/StreamingAssets"
+        },
+        vcmi: {
+          label: "Vic's Custom Match-inator v20.0.2",
+          productVersion: "20.0.2",
+          basePath: "vcmi-v20.0.2/",
+          loaderPath: "vcmi-v20.0.2/Build/web.loader.js",
+          dataPath: "vcmi-v20.0.2/Build/web.data.unityweb",
+          frameworkPath: "vcmi-v20.0.2/Build/web.framework.js.unityweb",
+          codePath: "vcmi-v20.0.2/Build/web.wasm.unityweb",
+          streamingAssetsUrl: "vcmi-v20.0.2/StreamingAssets"
         },
         beta: {
           label: "Beta 1.7.1.0",
           productVersion: "1.7.1.0-beta",
-          basePath: "v1.7.1.0-beta/"
+          basePath: "v1.7.1.0-beta/",
+          loaderPath: null,
+          dataPath: null,
+          frameworkPath: null,
+          codePath: null,
+          streamingAssetsUrl: null
         }
       };
 
@@ -240,7 +280,7 @@
         unityLoaderPromise = new Promise((resolve, reject) => {
           loader.onload = () => resolve();
           loader.onerror = () => reject(new Error("Could not load the Unity loader for " + config.productVersion));
-          loader.src = config.basePath + "Build/MarioVsLuigi-WebGL.loader.js";
+          loader.src = config.loaderPath;
         });
 
         return unityLoaderPromise;
@@ -348,7 +388,9 @@
         document.getElementById('unity-loader-ready').style.display = 'flex';
         document.getElementById('loader-fill').style.width = "0%";
         document.getElementById('loader-text').innerHTML = "Initializing Engine...";
-        document.getElementById('unity-canvas').style.display = 'block';
+        const canvas = document.getElementById('unity-canvas');
+        canvas.classList.toggle('vcmi-canvas', sessionVersion === "vcmi");
+        canvas.style.display = 'block';
         const bgImages = [
             "https://thumbs.dreamstime.com/b/vibrant-d-rendered-scene-inspired-classic-super-mario-video-game-image-features-iconic-elements-like-brick-blocks-404917322.jpg", 
             "https://static.vecteezy.com/system/resources/thumbnails/020/036/654/small/fantasy-game-scenery-background-free-vector.jpg", 
@@ -450,11 +492,11 @@
         const basePath = config.basePath;
 
         createUnityInstance(document.querySelector("#unity-canvas"), {
-          dataUrl: basePath + "Build/MarioVsLuigi-WebGL.data.unityweb",
-          frameworkUrl: basePath + "Build/MarioVsLuigi-WebGL.framework.js.unityweb",
-          codeUrl: basePath + "Build/MarioVsLuigi-WebGL.wasm.unityweb",
-          streamingAssetsUrl: basePath + "StreamingAssets",
-          companyName: "ipodtouch0218",
+          dataUrl: config.dataPath,
+          frameworkUrl: config.frameworkPath,
+          codeUrl: config.codePath,
+          streamingAssetsUrl: config.streamingAssetsUrl,
+          companyName: sessionVersion === "vcmi" ? "vlco_o" : "ipodtouch0218",
           productName: "NSMB-MarioVsLuigi",
           productVersion: config.productVersion,
         }, (p) => {
