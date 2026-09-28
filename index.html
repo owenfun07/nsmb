@@ -169,19 +169,10 @@
         <div id="trivia-container"></div>
     </div>
 
-    <div id="beta-container">
-      <div id="beta-loader" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:white; font-family:Courier; text-align:center;">
-        <img src="https://i.ibb.co/6M7CcpC/image.png" class="star-spinner">
-        <div>WARPING TO BETA...</div>
-      </div>
-      <iframe id="beta-frame" allow="autoplay; fullscreen; keyboard; focus-without-user-activation"></iframe>
-    </div>
-
     <canvas id="unity-canvas" width=960 height=540 style="width:100%; height:100%; display:none; background:#000;"></canvas>
 
     <script id="unity-loader-script"></script>
     <script>
-      const betaURL = "https://quiz-66.pro/lessons/lesson-127";
       const VERSION_CONFIG = {
         regular: {
           label: "Regular Version (most updated)",
@@ -227,11 +218,11 @@
           label: "Beta 1.7.1.0",
           productVersion: "1.7.1.0-beta",
           basePath: "v1.7.1.0-beta/",
-          loaderPath: null,
-          dataPath: null,
-          frameworkPath: null,
-          codePath: null,
-          streamingAssetsUrl: null
+          loaderPath: "v1.7.1.0-beta/Build/MarioVsLuigi-WebGL.loader.js",
+          dataPath: "v1.7.1.0-beta/Build/MarioVsLuigi-WebGL.data.unityweb",
+          frameworkPath: "v1.7.1.0-beta/Build/MarioVsLuigi-WebGL.framework.js.unityweb",
+          codePath: "v1.7.1.0-beta/Build/MarioVsLuigi-WebGL.wasm.unityweb",
+          streamingAssetsUrl: "v1.7.1.0-beta/StreamingAssets"
         }
       };
 
@@ -269,11 +260,6 @@
       let unityLoaderPromise = Promise.resolve();
 
       function prepareUnityLoader(versionKey) {
-        if (versionKey === "beta") {
-          unityLoaderPromise = Promise.resolve();
-          return unityLoaderPromise;
-        }
-
         const config = VERSION_CONFIG[versionKey] || VERSION_CONFIG.regular;
         const loader = document.getElementById('unity-loader-script');
 
@@ -371,17 +357,13 @@
 
       function handleLaunch() {
         document.getElementById('launch-screen').style.display = 'none';
-        if (sessionVersion === "beta") {
-          startBeta();
-        } else {
-          unityLoaderPromise
-            .then(startRegular)
-            .catch((error) => {
-              console.error(error);
-              document.getElementById('launch-screen').style.display = 'flex';
-              alert("Could not load the selected Unity version.");
-            });
-        }
+        unityLoaderPromise
+          .then(startRegular)
+          .catch((error) => {
+            console.error(error);
+            document.getElementById('launch-screen').style.display = 'flex';
+            alert("Could not load the selected Unity version.");
+          });
       }
 
       function startRegular() {
@@ -398,18 +380,6 @@
         ];
         document.getElementById('loader-bg-image').style.backgroundImage = `url('${bgImages[Math.floor(Math.random() * bgImages.length)]}')`;
         if(!unityStarted) { unityStarted = true; runUnity(); }
-      }
-
-      function startBeta() {
-        document.getElementById('beta-container').style.display = 'block';
-        const frame = document.getElementById('beta-frame');
-        const start = Date.now();
-        frame.src = "about:blank";
-        setTimeout(() => { frame.src = betaURL; }, 100);
-        frame.onload = () => {
-          const wait = Math.max(0, 5000 - (Date.now() - start));
-          setTimeout(() => { document.getElementById('beta-loader').style.display = 'none'; frame.focus(); }, wait);
-        };
       }
 
       function updateFullscreenUI() {
