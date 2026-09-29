@@ -493,17 +493,13 @@
         }
 
         function startSlowCrawl() {
-          // Takes exactly 15 seconds to go from 75% to 90%
-          const interval = setInterval(() => {
-            fakeProgress += 0.1;
-            if (fakeProgress >= 90) {
-              clearInterval(interval);
-              fakeProgress = 90;
-            }
-            updateProgressUI(fakeProgress / 100);
-          }, 100); // Increments slightly every 100ms
+    // Takes exactly 13.5 seconds to go from 75% to 90%
+    const interval = setInterval(() => {
+        fakeProgress += 0.1;
+        if (fakeProgress >= 90) {
+            clearInterval(interval);
+            fakeProgress = 90;
         }
-      }
-    </script>
-  </body>
-</html>
+        updateProgressUI(fakeProgress / 100);
+    }, 90); // Increments slightly every 90ms
+}
