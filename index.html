@@ -169,7 +169,7 @@
         <div id="trivia-container"></div>
     </div>
 
-    <canvas id="unity-canvas" width=960 height=540 style="width:100%; height:100%; display:none; background:#000;"></canvas>
+    <canvas id="unity-canvas" width=960 height=540 tabindex="-1" style="width:100%; height:100%; display:none; background:#000;"></canvas>
 
     <script id="unity-loader-script"></script>
     <script>
@@ -264,8 +264,20 @@
         const loader = document.getElementById('unity-loader-script');
 
         unityLoaderPromise = new Promise((resolve, reject) => {
-          loader.onload = () => resolve();
+          loader.onload = () => {
+            const createUnityInstanceForVersion = window.createUnityInstance;
+            if (typeof createUnityInstanceForVersion !== "function") {
+              reject(new Error("The Unity loader for " + config.productVersion + " loaded, but createUnityInstance was not available."));
+              return;
+            }
+
+            resolve({
+              versionKey,
+              createUnityInstance: createUnityInstanceForVersion
+            });
+          };
           loader.onerror = () => reject(new Error("Could not load the Unity loader for " + config.productVersion));
+          loader.removeAttribute('src');
           loader.src = config.loaderPath;
         });
 
@@ -358,7 +370,12 @@
       function handleLaunch() {
         document.getElementById('launch-screen').style.display = 'none';
         unityLoaderPromise
-          .then(startRegular)
+          .then((loadedLoader) => {
+            if (!loadedLoader || loadedLoader.versionKey !== sessionVersion) {
+              throw new Error("The selected Unity version loader was not the one that finished loading.");
+            }
+            startRegular(loadedLoader.createUnityInstance);
+          })
           .catch((error) => {
             console.error(error);
             document.getElementById('launch-screen').style.display = 'flex';
@@ -366,8 +383,9 @@
           });
       }
 
-      function startRegular() {
+      function startRegular(createUnityInstanceForVersion) {
         document.getElementById('unity-loader-ready').style.display = 'flex';
+        document.getElementById('unity-loader-ready').style.opacity = "1";
         document.getElementById('loader-fill').style.width = "0%";
         document.getElementById('loader-text').innerHTML = "Initializing Engine...";
         const canvas = document.getElementById('unity-canvas');
@@ -379,7 +397,7 @@
             "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSV-lZTG2_otKhadam0wP-qtx_oTkRxgTKMEg&s",
         ];
         document.getElementById('loader-bg-image').style.backgroundImage = `url('${bgImages[Math.floor(Math.random() * bgImages.length)]}')`;
-        if(!unityStarted) { unityStarted = true; runUnity(); }
+        if(!unityStarted) { unityStarted = true; runUnity(createUnityInstanceForVersion); }
       }
 
       function updateFullscreenUI() {
@@ -455,13 +473,13 @@
         }, 850);
       }, 5000);
 
-      function runUnity() {
+      function runUnity(createUnityInstanceForVersion) {
         let fakeProgress = 75;
         let isFakeLoading = false;
         const config = VERSION_CONFIG[sessionVersion] || VERSION_CONFIG.regular;
         const basePath = config.basePath;
 
-        createUnityInstance(document.querySelector("#unity-canvas"), {
+        const unityPromise = createUnityInstanceForVersion(document.querySelector("#unity-canvas"), {
           dataUrl: config.dataPath,
           frameworkUrl: config.frameworkPath,
           codeUrl: config.codePath,
@@ -477,14 +495,29 @@
             } else if (!isFakeLoading) {
               updateProgressUI(p);
             }
-        }).then(() => {
-            // Once Unity is actually ready, jump to 100% and fade out
-            updateProgressUI(1);
-            setTimeout(() => {
-                document.getElementById('unity-loader-ready').style.opacity = "0";
-                setTimeout(() => document.getElementById('unity-loader-ready').style.display = "none", 800);
-            }, 500);
         });
+
+        unityPromise
+          .then(() => {
+            // Give the browser a couple of paint frames after Unity reports success.
+            // This is especially important for the older Beta loader, which resolves
+            // directly after its postRun callback.
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                updateProgressUI(1);
+                setTimeout(() => {
+                  document.getElementById('unity-loader-ready').style.opacity = "0";
+                  setTimeout(() => document.getElementById('unity-loader-ready').style.display = "none", 800);
+                }, 250);
+              });
+            });
+          })
+          .catch((error) => {
+            console.error("Unity failed to start:", error);
+            document.getElementById('unity-loader-ready').style.opacity = "1";
+            document.getElementById('loader-text').innerHTML = "Unity failed to start.";
+            alert("Unity failed to start this version. Check the browser console for details.");
+          });
 
         function updateProgressUI(val) {
           const percent = Math.round(val * 100);
