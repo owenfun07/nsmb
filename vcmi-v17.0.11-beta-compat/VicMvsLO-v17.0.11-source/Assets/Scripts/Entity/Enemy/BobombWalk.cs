@@ -1,0 +1,317 @@
+﻿using NSMB.Utils;
+using Photon.Pun;
+using UnityEngine;
+
+public class BobombWalk : HoldableEntity
+{
+    [SerializeField] private GameObject explosionPrefab;
+    [SerializeField] private float walkSpeed = 0.6f, kickSpeed = 4.5f, detonationTime = 4f;
+    [SerializeField] private int explosionTileSize = 2;
+
+    public bool lit, detonated;
+    public bool hasBigExplosion;
+    private float detonateCount;
+
+    private Vector3 previousFrameVelocity;
+
+    #region Unity Methods
+
+    public override void FixedUpdate()
+    {
+        if (GameManager.Instance && GameManager.Instance.gameover)
+        {
+            body.velocity = Vector2.zero;
+            body.angularVelocity = 0;
+            animator.enabled = false;
+            body.isKinematic = true;
+            return;
+        }
+
+        base.FixedUpdate();
+        if (Frozen || dead)
+            return;
+
+
+        if (lit)
+            animator.SetTrigger("lit");
+
+
+        if (!photonView || photonView.IsMine)
+            HandleCollision();
+
+        sRenderer.flipX = FacingLeftTween;
+
+        switch (lit)
+        {
+            case true when !detonated:
+            {
+                if ((detonateCount -= Time.fixedDeltaTime) < 0)
+                {
+                    if (photonView.IsMine)
+                        photonView.RPC("Detonate", RpcTarget.All);
+                    return;
+                }
+
+                var redOverlayPercent = 5.39f / (detonateCount + 2.695f) * 10f % 1f;
+                MaterialPropertyBlock block = new();
+                block.SetFloat("FlashAmount", redOverlayPercent);
+                sRenderer.SetPropertyBlock(block);
+                animator.SetBool("carrying", holder != null);
+                break;
+            }
+            case false when isRotating:
+                body.velocity = new Vector2(0, 0);
+                break;
+            case false:
+                body.velocity = new Vector2(walkSpeed * (FacingLeftTween ? -1 : 1), body.velocity.y);
+                break;
+        }
+
+        previousFrameVelocity = body.velocity;
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    public override void InteractWithPlayer(PlayerController player)
+    {
+        var damageDirection = (player.body.position - body.position).normalized;
+        var attackedFromAbove = Vector2.Dot(damageDirection, Vector2.up) > 0.5f;
+
+        if (!attackedFromAbove && player.state == Enums.PowerupState.BlueShell && player.crouching && !player.inShell)
+        {
+            photonView.RPC("SetLeft", RpcTarget.All, damageDirection.x > 0);
+        }
+        else if (player.sliding || player.inShell || player.invincible > 0)
+        {
+            photonView.RPC("SpecialKill", RpcTarget.All, player.body.velocity.x > 0, false, player.StarCombo++);
+        }
+        else if (attackedFromAbove && !lit)
+        {
+            if (player.state != Enums.PowerupState.MiniMushroom || (player.groundpound && attackedFromAbove))
+            {
+                photonView.RPC("Light", RpcTarget.All);
+                GameManager.Instance.MatchConditioner.ConditionActioned(player, "SteppedOnEnemy");
+            }
+
+            photonView.RPC("PlaySound", RpcTarget.All, Enums.Sounds.Enemy_Generic_Stomp);
+            if (player.groundpound && player.state != Enums.PowerupState.MiniMushroom)
+            {
+                photonView.RPC("Kick", RpcTarget.All, player.body.position.x < body.position.x,
+                    Mathf.Abs(player.body.velocity.x) / player.RunningMaxSpeed, player.groundpound);
+            }
+            else
+            {
+                player.bounce = true;
+                player.groundpound = false;
+            }
+
+            player.drill = false;
+        }
+        else
+        {
+            if (lit)
+            {
+                if (!holder)
+                {
+                    if (player.CanPickup())
+                    {
+                        photonView.RPC("Pickup", RpcTarget.All, player.photonView.ViewID);
+                        player.photonView.RPC("SetHolding", RpcTarget.All, photonView.ViewID);
+                    }
+                    else
+                    {
+                        photonView.RPC("Kick", RpcTarget.All, player.body.position.x < body.position.x,
+                            Mathf.Abs(player.body.velocity.x) / player.RunningMaxSpeed, player.groundpound);
+                    }
+                }
+            }
+            else if (player.hitInvincibilityCounter <= 0)
+            {
+                player.photonView.RPC("Powerdown", RpcTarget.All, false);
+                photonView.RPC("SetLeft", RpcTarget.All, damageDirection.x < 0);
+            }
+        }
+    }
+
+    private void HandleCollision()
+    {
+        if (holder)
+            return;
+
+        physics.UpdateCollisions();
+        if (lit && physics.onGround)
+        {
+            body.velocity -= body.velocity * (Time.fixedDeltaTime * 3f);
+            if (Mathf.Abs(body.velocity.x) < 0.05) body.velocity = new Vector2(0, body.velocity.y);
+        }
+
+        if (!photonView.IsMineOrLocal())
+            return;
+
+        if (physics.hitRight && !FacingLeftTween)
+        {
+            if (photonView)
+                photonView.RPC("Turnaround", RpcTarget.All, false);
+            else
+                Turnaround(false);
+        }
+        else if (physics.hitLeft && FacingLeftTween)
+        {
+            if (photonView)
+                photonView.RPC("Turnaround", RpcTarget.All, true);
+            else
+                Turnaround(true);
+        }
+
+        if (physics.onGround && physics.hitRoof)
+            photonView.RPC("SpecialKill", RpcTarget.All);
+    }
+
+    #endregion
+
+    #region PunRPCs
+
+    [PunRPC]
+    public void Detonate()
+    {
+        if (hasBigExplosion)
+        {
+            DetonateBig();
+            return;
+        }
+
+        sRenderer.enabled = false;
+        hitbox.enabled = false;
+        detonated = true;
+
+        Instantiate(explosionPrefab, transform.position, Quaternion.identity);
+
+        if (!photonView.IsMine)
+            return;
+
+        var hits = Physics2D.CircleCastAll(transform.position + new Vector3(0, 0.5f), 1f, Vector2.zero);
+        foreach (var hit in hits)
+        {
+            var obj = hit.collider.gameObject;
+
+            if (obj == gameObject)
+                continue;
+
+            if (obj.GetComponent<KillableEntity>() is KillableEntity en)
+            {
+                en.photonView.RPC("SpecialKill", RpcTarget.All, transform.position.x < obj.transform.position.x, false,
+                    0);
+                continue;
+            }
+
+            switch (hit.collider.tag)
+            {
+                case "Player":
+                {
+                    obj.GetPhotonView().RPC("Powerdown", RpcTarget.All, false);
+                    break;
+                }
+            }
+        }
+
+        var tileLocation = Utils.WorldToTilemapPosition(body.position);
+        var tm = GameManager.Instance.tilemap;
+        for (var x = -explosionTileSize; x <= explosionTileSize; x++)
+        for (var y = -explosionTileSize; y <= explosionTileSize; y++)
+        {
+            if (Mathf.Abs(x) + Mathf.Abs(y) > explosionTileSize) continue;
+            var ourLocation = tileLocation + new Vector3Int(x, y, 0);
+            Utils.WrapTileLocation(ref ourLocation);
+
+            var tile = tm.GetTile(ourLocation);
+            if (tile is InteractableTile iTile)
+                iTile.Interact(this, InteractableTile.InteractionDirection.Up,
+                    Utils.TilemapToWorldPosition(ourLocation));
+        }
+
+        PhotonNetwork.Destroy(gameObject);
+    }
+
+    [PunRPC]
+    public void DetonateBig()
+    {
+        explosionTileSize = 150;
+        var tileLocation = Utils.WorldToTilemapPosition(Vector3.zero);
+        var tm = GameManager.Instance.tilemap;
+        for (var x = -explosionTileSize; x <= explosionTileSize; x++)
+        for (var y = -explosionTileSize; y <= explosionTileSize; y++)
+        {
+            if (Mathf.Abs(x) + Mathf.Abs(y) > explosionTileSize) continue;
+            var ourLocation = tileLocation + new Vector3Int(x, y, 0);
+            Utils.WrapTileLocation(ref ourLocation);
+
+            var tile = tm.GetTile(ourLocation);
+            if (tile is InteractableTile iTile)
+                iTile.Interact(this, InteractableTile.InteractionDirection.Up,
+                    Utils.TilemapToWorldPosition(ourLocation));
+        }
+
+        PhotonNetwork.Destroy(gameObject);
+    }
+
+    [PunRPC]
+    public override void Kill()
+    {
+        Light();
+    }
+
+    [PunRPC]
+    public void Light()
+    {
+        animator.SetTrigger("lit");
+        tweenableRotation = false;
+        detonateCount = hasBigExplosion ? 0 : detonationTime;
+        body.velocity = Vector2.zero;
+        lit = true;
+        PlaySound(Enums.Sounds.Enemy_Bobomb_Fuse);
+    }
+
+    [PunRPC]
+    public override void Throw(bool fromLeft, bool crouch, Vector2 pos)
+    {
+        animator.SetBool("carrying", holder != null);
+
+        if (!holder)
+            return;
+
+        body.position = pos;
+        if (Utils.IsTileSolidAtWorldLocation(body.position))
+            transform.position = body.position = new Vector2(holder.transform.position.x, transform.position.y);
+
+        holder = null;
+        photonView.TransferOwnership(PhotonNetwork.MasterClient);
+        // FacingLeftTween = fromLeft;
+        sRenderer.flipX = FacingLeftTween;
+        if (crouch)
+            body.velocity = new Vector2(2f * (fromLeft ? -1 : 1), body.velocity.y);
+        else
+            body.velocity = new Vector2(kickSpeed * (fromLeft ? -1 : 1), body.velocity.y);
+    }
+
+    [PunRPC]
+    public override void Kick(bool fromLeft, float speed, bool groundpound)
+    {
+        FacingLeftTween = !fromLeft;
+        sRenderer.flipX = FacingLeftTween;
+        body.velocity = new Vector2(kickSpeed * (FacingLeftTween ? -1 : 1), 3f);
+        PlaySound(Enums.Sounds.Enemy_Shell_Kick);
+    }
+
+    [PunRPC]
+    public void Turnaround(bool hitWallOnLeft)
+    {
+        FacingLeftTween = !hitWallOnLeft;
+        sRenderer.flipX = FacingLeftTween;
+        body.velocity = new Vector2(lit ? -previousFrameVelocity.x : walkSpeed, body.velocity.y);
+        if (lit) PlaySound(Enums.Sounds.World_Block_Bump);
+    }
+
+    #endregion
+}

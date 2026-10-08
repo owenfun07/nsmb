@@ -1,0 +1,19 @@
+using TMPro;
+using UnityEngine;
+
+public class LoadingLevelCreator : MonoBehaviour
+{
+    public TMP_Text text;
+    public TMP_Text readyText;
+
+    public void Update()
+    {
+        if (!GameManager.Instance)
+            return;
+
+        if (GameManager.Instance.levelDesigner != "")
+            text.text = $"Level designed by <i>{GameManager.Instance.levelDesigner}</i>";
+        if (GameManager.Instance.MatchConditioner.count >= 8) readyText.text = "You better be ready.";
+        enabled = false;
+    }
+}
