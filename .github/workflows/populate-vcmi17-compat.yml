@@ -1,0 +1,40 @@
+name: Populate VCMI 17.0.11 compatibility copy
+
+on:
+  push:
+    branches:
+      - vcmi-v17.0.11-beta-compat
+
+permissions:
+  contents: write
+
+jobs:
+  copy-vcmi:
+    if: ${{ !contains(github.event.head_commit.message, '[skip vcmi copy]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out compatibility branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Copy exact VCMI 17 stable source
+        shell: bash
+        run: |
+          set -e
+          rm -rf /tmp/VicMvsLO
+          git clone --depth 1 --branch vcmi-17-stable https://github.com/vlcoo/VicMvsLO.git /tmp/VicMvsLO
+          rm -rf /tmp/VicMvsLO/.git
+          rm -rf vcmi-v17.0.11-beta-compat/VicMvsLO-v17.0.11-source
+          mkdir -p vcmi-v17.0.11-beta-compat
+          cp -a /tmp/VicMvsLO vcmi-v17.0.11-beta-compat/VicMvsLO-v17.0.11-source
+
+      - name: Commit compatibility copy
+        shell: bash
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add vcmi-v17.0.11-beta-compat/VicMvsLO-v17.0.11-source
+          git commit -m "Populate VCMI 17.0.11 compatibility copy [skip vcmi copy]" || exit 0
+          git push
