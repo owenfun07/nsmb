@@ -1,0 +1,98 @@
+name: Build and publish VCMI 17 WebGL test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Compile VCMI 17.0.11 for WebGL
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the compatibility branch
+        uses: actions/checkout@v4
+        with:
+          ref: vcmi-v17.0.11-beta-compat
+          fetch-depth: 1
+
+      - name: Cache Unity Library
+        uses: actions/cache@v4
+        with:
+          path: vcmi-v17.0.11-beta-compat/VicMvsLO-v17.0.11-source/Library
+          key: vcmi17-webgl-library-${{ hashFiles('vcmi-v17.0.11-beta-compat/VicMvsLO-v17.0.11-source/Assets/**', 'vcmi-v17.0.11-beta-compat/VicMvsLO-v17.0.11-source/Packages/**', 'vcmi-v17.0.11-beta-compat/VicMvsLO-v17.0.11-source/ProjectSettings/**') }}
+          restore-keys: |
+            vcmi17-webgl-library-
+
+      - name: Build WebGL using Unity 2022.3.18f1
+        uses: game-ci/unity-builder@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          projectPath: vcmi-v17.0.11-beta-compat/VicMvsLO-v17.0.11-source
+          unityVersion: 2022.3.18f1
+          targetPlatform: WebGL
+          buildMethod: VCMI17CompatibilityBuild.Build
+          allowDirtyBuild: true
+
+      - name: Verify generated WebGL output
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="vcmi-v17.0.11-beta-compat/VicMvsLO-v17.0.11-source/Builds/Web"
+          for f in Web.loader.js Web.data.unityweb Web.framework.js.unityweb Web.wasm.unityweb; do
+            found="$(find "$OUT" -maxdepth 3 -type f -name "$f" -print -quit)"
+            if [ -z "$found" ]; then
+              echo "Missing required WebGL output: $f"
+              find "$OUT" -maxdepth 3 -type f | sort | head -100
+              exit 1
+            fi
+            echo "Found: $found ($(wc -c < "$found") bytes)"
+          done
+
+      - name: Upload build as a downloadable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vcmi-v17.0.11-webgl-build
+          path: vcmi-v17.0.11-beta-compat/VicMvsLO-v17.0.11-source/Builds/Web/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Check out the website branch separately
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          path: web-root
+          fetch-depth: 1
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish only the test build assets to the website branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="vcmi-v17.0.11-beta-compat/VicMvsLO-v17.0.11-source/Builds/Web"
+          DEST="web-root/vcmi-v17.0.11-beta-compat"
+          mkdir -p "$DEST/Build"
+          for f in Web.loader.js Web.data.unityweb Web.framework.js.unityweb Web.wasm.unityweb; do
+            found="$(find "$OUT" -maxdepth 3 -type f -name "$f" -print -quit)"
+            test -n "$found"
+            cp "$found" "$DEST/Build/$f"
+          done
+
+          rm -rf "$DEST/StreamingAssets"
+          if [ -d "$OUT/StreamingAssets" ]; then
+            cp -a "$OUT/StreamingAssets" "$DEST/StreamingAssets"
+          fi
+
+          git -C web-root config user.name "github-actions[bot]"
+          git -C web-root config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C web-root add -A -- vcmi-v17.0.11-beta-compat/Build vcmi-v17.0.11-beta-compat/StreamingAssets
+          if git -C web-root diff --cached --quiet; then
+            echo "The published WebGL files are already up to date."
+            exit 0
+          fi
+          git -C web-root commit -m "Publish VCMI 17.0.11 WebGL compatibility test build"
+          git -C web-root push origin HEAD:master
