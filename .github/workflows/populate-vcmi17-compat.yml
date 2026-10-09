@@ -18,16 +18,20 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Copy exact VCMI 17 stable source
+      - name: Copy exact VCMI 17 stable source only if not already present
         shell: bash
         run: |
           set -e
+          DEST="vcmi-v17.0.11-beta-compat/VicMvsLO-v17.0.11-source"
+          if [ -f "$DEST/ProjectSettings/ProjectVersion.txt" ] && [ -d "$DEST/Assets" ]; then
+            echo "The source copy already exists; preserving it and all local compatibility edits."
+            exit 0
+          fi
           rm -rf /tmp/VicMvsLO
           git clone --depth 1 --branch vcmi-17-stable https://github.com/vlcoo/VicMvsLO.git /tmp/VicMvsLO
           rm -rf /tmp/VicMvsLO/.git
-          rm -rf vcmi-v17.0.11-beta-compat/VicMvsLO-v17.0.11-source
           mkdir -p vcmi-v17.0.11-beta-compat
-          cp -a /tmp/VicMvsLO vcmi-v17.0.11-beta-compat/VicMvsLO-v17.0.11-source
+          cp -a /tmp/VicMvsLO "$DEST"
 
       - name: Commit compatibility copy
         shell: bash
