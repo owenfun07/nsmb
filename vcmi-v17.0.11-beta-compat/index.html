@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Vic's Custom Match-inator 17.0.11 — Compatibility Test</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; min-height: 100%; background: #101114; color: #f4f4f5; }
+    body { min-height: 100vh; display: flex; flex-direction: column; }
+    header { padding: 16px 22px; border-bottom: 1px solid #303139; background: #18191f; }
+    header strong { display: block; font-size: 17px; }
+    header span { display: block; margin-top: 4px; color: #a7a7b2; font-size: 12px; }
+    #game-wrap { flex: 1; position: relative; min-height: 320px; display: flex; align-items: center; justify-content: center; background: #000; }
+    #unity-canvas { display: block; width: 100%; height: 100%; min-height: 320px; background: #000; outline: none; }
+    #panel { width: min(660px, calc(100% - 32px)); margin: 28px auto; padding: 24px; border: 1px solid #373942; border-radius: 12px; background: #1b1c23; box-shadow: 0 15px 55px #0008; }
+    h1 { margin: 0 0 12px; font-size: clamp(21px, 4vw, 30px); }
+    p { color: #d2d2dc; line-height: 1.55; }
+    .status { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1px solid #57505a; border-radius: 8px; background: #29252d; }
+    .dot { width: 9px; height: 9px; margin-top: 6px; border-radius: 50%; flex: 0 0 auto; background: #f4b942; }
+    .status.ready { border-color: #35664a; background: #192b21; }
+    .status.ready .dot { background: #55d887; }
+    .status.error { border-color: #8b3d42; background: #301c20; }
+    .status.error .dot { background: #ff6868; }
+    #status-title { font-weight: 700; }
+    #status-detail { margin-top: 3px; color: #c9c6d0; font-size: 13px; overflow-wrap: anywhere; }
+    #file-list { margin: 16px 0 0; padding-left: 20px; color: #b8bbc7; font: 12px/1.8 ui-monospace, SFMono-Regular, Menlo, monospace; overflow-wrap: anywhere; }
+    button { margin-top: 18px; padding: 11px 18px; border: 0; border-radius: 7px; background: #e43c43; color: white; font-size: 15px; font-weight: 700; cursor: pointer; }
+    button:disabled { cursor: not-allowed; background: #50515b; color: #b7b7c1; }
+    #progress-area { display: none; margin-top: 16px; }
+    #progress-track { height: 9px; background: #33343c; border-radius: 99px; overflow: hidden; }
+    #progress-fill { height: 100%; width: 0%; background: #eb4248; transition: width .15s linear; }
+    #progress-label { margin-top: 7px; color: #c9c6d0; font-size: 12px; }
+    .small { color: #9fa1ac; font-size: 12px; }
+    footer { padding: 12px 18px; color: #777985; text-align: center; font-size: 11px; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+  <header>
+    <strong>Vic's Custom Match-inator — v17.0.11</strong>
+    <span>Isolated Beta lobby compatibility test · Not linked from the main launcher</span>
+  </header>
+
+  <main id="game-wrap">
+    <canvas id="unity-canvas" width="960" height="540" tabindex="-1" hidden></canvas>
+    <section id="panel" aria-live="polite">
+      <h1>VCMI 17 compatibility test</h1>
+      <p>This separate page is prepared for the <strong>older PUN-based v17.0.11 WebGL build</strong>. It does not use the newer v20 loader or the original Beta loader's file names.</p>
+      <div id="status" class="status">
+        <span class="dot" aria-hidden="true"></span>
+        <div>
+          <div id="status-title">Checking for the compiled game…</div>
+          <div id="status-detail">Looking for Unity WebGL output in this folder.</div>
+        </div>
+      </div>
+      <ul id="file-list"></ul>
+      <div id="progress-area">
+        <div id="progress-track"><div id="progress-fill"></div></div>
+        <div id="progress-label">Preparing Unity…</div>
+      </div>
+      <button id="launch-button" disabled>CHECKING BUILD FILES…</button>
+      <p class="small">This page is only the browser loader. The Unity source project must first be compiled for WebGL and its generated Build files copied into this folder.</p>
+    </section>
+  </main>
+
+  <footer>Experimental build · The main launcher and VCMI v20 files are unchanged.</footer>
+
+  <script>
+    /*
+     * This is configured for the output name used by the v17 source BuildScript:
+     * BuildScript.BuildWebGL() targets Builds/Web, so Unity's expected build stem is "Web".
+     *
+     * Unlike Beta 1.7.1.0 (MarioVsLuigi-WebGL.*) and VCMI v20 (web.*), this test
+     * intentionally uses the v17 output naming and v17 game's own metadata.
+     */
+    const BUILD = {
+      loader: "Build/Web.loader.js",
+      data: "Build/Web.data.unityweb",
+      framework: "Build/Web.framework.js.unityweb",
+      code: "Build/Web.wasm.unityweb",
+      streamingAssets: "StreamingAssets",
+      companyName: "vlco_o",
+      productName: "NSMBVersus: vic's Custom Match-inator",
+      productVersion: "17.0.11"
+    };
+
+    const canvas = document.getElementById("unity-canvas");
+    const panel = document.getElementById("panel");
+    const statusBox = document.getElementById("status");
+    const statusTitle = document.getElementById("status-title");
+    const statusDetail = document.getElementById("status-detail");
+    const fileList = document.getElementById("file-list");
+    const launchButton = document.getElementById("launch-button");
+    const progressArea = document.getElementById("progress-area");
+    const progressFill = document.getElementById("progress-fill");
+    const progressLabel = document.getElementById("progress-label");
+    let buildReady = false;
+    let launching = false;
+
+    function setStatus(kind, title, detail) {
+      statusBox.className = "status" + (kind ? " " + kind : "");
+      statusTitle.textContent = title;
+      statusDetail.textContent = detail;
+    }
+
+    async function checkFile(path) {
+      try {
+        const response = await fetch(path, { method: "HEAD", cache: "no-store" });
+        return response.ok;
+      } catch {
+        return false;
+      }
+    }
+
+    async function checkBuild() {
+      launchButton.disabled = true;
+      launchButton.textContent = "CHECKING BUILD FILES…";
+      fileList.replaceChildren();
+      setStatus("", "Checking for the compiled game…", "Testing the expected v17 WebGL files.");
+      const required = [BUILD.loader, BUILD.data, BUILD.framework, BUILD.code];
+      const results = await Promise.all(required.map(async path => ({ path, ok: await checkFile(path) })));
+      for (const item of results) {
+        const li = document.createElement("li");
+        li.textContent = (item.ok ? "FOUND  " : "MISSING  ") + item.path;
+        fileList.appendChild(li);
+      }
+      buildReady = results.every(item => item.ok);
+      if (buildReady) {
+        setStatus("ready", "WebGL build files found.", "The page can now start the v17 Unity player.");
+        launchButton.disabled = false;
+        launchButton.textContent = "LAUNCH VCMI 17 TEST";
+      } else {
+        setStatus("error", "The compiled v17 WebGL build is not here yet.", "This is an HTML loader only; the source project cannot run in a browser until Unity compiles it.");
+        launchButton.disabled = false;
+        launchButton.textContent = "CHECK AGAIN";
+      }
+    }
+
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error("Couldn't load " + src));
+        document.head.appendChild(script);
+      });
+    }
+
+    async function launchGame() {
+      if (!buildReady || launching) {
+        await checkBuild();
+        if (!buildReady) return;
+      }
+      launching = true;
+      launchButton.disabled = true;
+      launchButton.textContent = "STARTING UNITY…";
+      progressArea.style.display = "block";
+      progressFill.style.width = "0%";
+      progressLabel.textContent = "Loading Unity WebGL player…";
+      setStatus("", "Loading v17.0.11…", "This may take a little while on the first load.");
+      try {
+        await loadScript(BUILD.loader);
+        if (typeof window.createUnityInstance !== "function") {
+          throw new Error("Unity loader loaded but createUnityInstance wasn't found.");
+        }
+        canvas.hidden = false;
+        canvas.focus();
+        const instance = await window.createUnityInstance(canvas, {
+          dataUrl: BUILD.data,
+          frameworkUrl: BUILD.framework,
+          codeUrl: BUILD.code,
+          streamingAssetsUrl: BUILD.streamingAssets,
+          companyName: BUILD.companyName,
+          productName: BUILD.productName,
+          productVersion: BUILD.productVersion,
+          matchWebGLToCanvasSize: true
+        }, progress => {
+          const percent = Math.round(progress * 100);
+          progressFill.style.width = percent + "%";
+          progressLabel.textContent = "Unity loading: " + percent + "%";
+        });
+        window.vcmi17UnityInstance = instance;
+        panel.hidden = true;
+      } catch (error) {
+        console.error(error);
+        canvas.hidden = true;
+        setStatus("error", "Unity could not start.", error && error.message ? error.message : String(error));
+        progressLabel.textContent = "Launch failed. Check the browser console for details.";
+        launchButton.disabled = false;
+        launchButton.textContent = "TRY AGAIN";
+        launching = false;
+      }
+    }
+
+    launchButton.addEventListener("click", launchGame);
+    checkBuild();
+  </script>
+</body>
+</html>
