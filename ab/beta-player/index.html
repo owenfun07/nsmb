@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en-us">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta name="viewport" content="width=device-width,height=device-height,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <title>NSMB-MarioVsLuigi Beta 1.7.1.0 — Fullscreen Test</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; border: 0;
+      width: 100%; height: 100%;
+      min-width: 100%; min-height: 100%;
+      overflow: hidden; background: #000;
+    }
+    #unity-canvas {
+      position: fixed; inset: 0;
+      display: block; width: 100vw; height: 100vh;
+      padding: 0; margin: 0; border: 0;
+      background: #231F20; outline: none;
+    }
+    @supports (height: 100dvh) {
+      #unity-canvas { width: 100vw; height: 100dvh; }
+    }
+    body { touch-action: none; }
+  </style>
+</head>
+<body>
+  <canvas id="unity-canvas" width="960" height="540" tabindex="-1" aria-label="NSMB Mario Vs Luigi Beta game"></canvas>
+  <script src="../../v1.7.1.0-beta/Build/MarioVsLuigi-WebGL.loader.js"></script>
+  <script>
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      document.documentElement.style.width = "100%";
+      document.documentElement.style.height = "100%";
+    }
+
+    const canvas = document.getElementById("unity-canvas");
+    function resizeGameCanvas() {
+      canvas.style.width = "100vw";
+      canvas.style.height = (window.visualViewport ? window.visualViewport.height : window.innerHeight) + "px";
+    }
+    resizeGameCanvas();
+    window.addEventListener("resize", resizeGameCanvas);
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", resizeGameCanvas);
+    }
+
+    createUnityInstance(canvas, {
+      dataUrl: "../../v1.7.1.0-beta/Build/MarioVsLuigi-WebGL.data.unityweb",
+      frameworkUrl: "../../v1.7.1.0-beta/Build/MarioVsLuigi-WebGL.framework.js.unityweb",
+      codeUrl: "../../v1.7.1.0-beta/Build/MarioVsLuigi-WebGL.wasm.unityweb",
+      streamingAssetsUrl: "../../v1.7.1.0-beta/StreamingAssets",
+      companyName: "ipodtouch0218",
+      productName: "NSMB-MarioVsLuigi",
+      productVersion: "1.7.1.0-beta",
+      matchWebGLToCanvasSize: true
+    }).then(function (instance) {
+      window.betaUnityInstance = instance;
+    }).catch(function (message) {
+      console.error("Beta WebGL failed to start:", message);
+      document.body.innerHTML = '<div style="color:white;font:16px monospace;padding:24px">Beta failed to load. Open the browser console for details.</div>';
+    });
+  </script>
+</body>
+</html>
