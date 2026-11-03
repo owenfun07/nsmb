@@ -140,7 +140,6 @@
         <option value="v2.1.1.0">Version 2.1.1.0</option>
         <option value="v2.1.0.1">Version 2.1.0.1</option>
         <option value="vcmi">Vic's Custom Match-inator v20.0.2</option>
-        <option value="kkt">KKT's Gooffy Little Mod — EXPERIMENTAL</option>
         <option value="beta">Beta 1.7.1.0</option>
       </select>
 
@@ -168,11 +167,6 @@
           </div>
         </div>
         <div id="trivia-container"></div>
-    </div>
-
-    <div id="external-game-container" style="display:none; position:fixed; inset:0; width:100%; height:100%; background:#000; z-index:130;">
-      <div id="external-game-notice" style="position:absolute;top:10px;left:10px;z-index:2;padding:7px 10px;background:#111d;color:#ffd36a;border:1px solid #80652b;border-radius:6px;font:12px Courier New,monospace;">EXPERIMENTAL — hosted by itch.io</div>
-      <iframe id="external-game-frame" title="KKT's Gooffy Little Mod" src="about:blank" allow="autoplay; fullscreen; gamepad; clipboard-read; clipboard-write" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" style="width:100%;height:100%;border:0;"></iframe>
     </div>
 
     <canvas id="unity-canvas" width=960 height=540 tabindex="-1" style="width:100%; height:100%; display:none; background:#000;"></canvas>
@@ -219,11 +213,6 @@
           frameworkPath: "vcmi-v20.0.2/Build/web.framework.js.unityweb",
           codePath: "vcmi-v20.0.2/Build/web.wasm.unityweb",
           streamingAssetsUrl: "vcmi-v20.0.2/StreamingAssets"
-        },
-        kkt: {
-          label: "KKT's Gooffy Little Mod (Experimental)",
-          productVersion: "1.1.0",
-          externalUrl: "https://kingkittyturnip.itch.io/kkts-gooffy-little-mod"
         },
         beta: {
           label: "Beta 1.7.1.0",
@@ -274,10 +263,6 @@
 
       function prepareUnityLoader(versionKey) {
         const config = VERSION_CONFIG[versionKey] || VERSION_CONFIG.regular;
-        if (config.externalUrl) {
-          unityLoaderPromise = Promise.resolve({ versionKey, external: true });
-          return unityLoaderPromise;
-        }
         const loader = document.getElementById('unity-loader-script');
 
         unityLoaderPromise = new Promise((resolve, reject) => {
@@ -383,9 +368,6 @@
         if (versionChanged && isGameRunning) {
           sessionStorage.setItem('settings_applied', 'true');
           location.reload();
-        } else if (VERSION_CONFIG[sessionVersion] && VERSION_CONFIG[sessionVersion].externalUrl) {
-          unityLoaderPromise = Promise.resolve({ versionKey: sessionVersion, external: true });
-          document.getElementById('settings-popup').style.display = 'none';
         } else {
           prepareUnityLoader(sessionVersion).catch((error) => {
             console.error(error);
@@ -396,23 +378,11 @@
       }
 
       function handleLaunch() {
-        // External games do not use this repository's Unity loader files.
-        // Launch them directly so an older pending Unity-loader request cannot block them.
-        if (VERSION_CONFIG[sessionVersion] && VERSION_CONFIG[sessionVersion].externalUrl) {
-          document.getElementById('launch-screen').style.display = 'none';
-          startExternalGame();
-          return;
-        }
-
         document.getElementById('launch-screen').style.display = 'none';
         unityLoaderPromise
           .then((loadedLoader) => {
             if (!loadedLoader || loadedLoader.versionKey !== sessionVersion) {
               throw new Error("The selected Unity version loader was not the one that finished loading.");
-            }
-            if (loadedLoader.external) {
-              startExternalGame();
-              return;
             }
             startRegular(loadedLoader.createUnityInstance);
           })
@@ -421,16 +391,6 @@
             document.getElementById('launch-screen').style.display = 'flex';
             alert("Could not load the selected Unity version.");
           });
-      }
-
-      function startExternalGame() {
-        document.getElementById("unity-canvas").style.display = "none";
-        document.getElementById("unity-loader-ready").style.display = "none";
-        document.getElementById("beta-container").style.display = "none";
-        const external = document.getElementById("external-game-container");
-        const frame = document.getElementById("external-game-frame");
-        external.style.display = "block";
-        frame.src = VERSION_CONFIG[sessionVersion].externalUrl;
       }
 
       function startRegular(createUnityInstanceForVersion) {
