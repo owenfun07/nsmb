@@ -255,7 +255,9 @@
 
       let coins = 0;
       let unityStarted = false;
-      let sessionVersion = normalizeSessionVersion(localStorage.getItem('mario_last_session') || 'regular');
+      const abLaunchParam = new URLSearchParams(window.location.search).get("ab");
+      const abLaunchVersion = abLaunchParam ? normalizeSessionVersion(abLaunchParam) : null;
+      let sessionVersion = abLaunchVersion || normalizeSessionVersion(localStorage.getItem('mario_last_session') || 'regular');
       let shouldSaveCoins = false;
       let unityLoaderPromise = Promise.resolve();
 
@@ -297,7 +299,15 @@
           document.getElementById('coin-score').innerHTML = "x" + coins;
         }
 
-        if (sessionStorage.getItem('settings_applied') === 'true') {
+        if (abLaunchVersion) {
+          // The /ab player reuses this launcher's proven full-window Unity canvas sizing
+          // without changing the user's saved version preference.
+          sessionVersion = abLaunchVersion;
+          updateLaunchButton();
+          document.getElementById('version-select').value = sessionVersion;
+          document.getElementById('persistence-popup').style.display = 'none';
+          handleLaunch();
+        } else if (sessionStorage.getItem('settings_applied') === 'true') {
           sessionStorage.removeItem('settings_applied');
           sessionVersion = normalizeSessionVersion(localStorage.getItem('mario_last_session') || 'regular');
           updateLaunchButton();
