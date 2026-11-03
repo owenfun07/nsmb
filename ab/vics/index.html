@@ -33,10 +33,10 @@ button:disabled{opacity:.6;cursor:wait}.note{font-size:12px;color:#999ba8}
     "beta-1.7.1.0": { label: "Beta 1.7.1.0", url: root + "v1.7.1.0-beta/" },
     "beta": { label: "Beta 1.7.1.0", url: root + "v1.7.1.0-beta/" },
     "v1.7.1.0-beta": { label: "Beta 1.7.1.0", url: root + "v1.7.1.0-beta/" },
-    "vics": { label: "Vic's Custom Match-inator v20.0.2", url: root + "vcmi-v20.0.2/" },
-    "vic": { label: "Vic's Custom Match-inator v20.0.2", url: root + "vcmi-v20.0.2/" },
-    "vcmi": { label: "Vic's Custom Match-inator v20.0.2", url: root + "vcmi-v20.0.2/" },
-    "vcmi-v20.0.2": { label: "Vic's Custom Match-inator v20.0.2", url: root + "vcmi-v20.0.2/" }
+    "vics": { label: "Vic's Custom Match-inator v20.0.2", url: root + "?ab=vcmi" },
+    "vic": { label: "Vic's Custom Match-inator v20.0.2", url: root + "?ab=vcmi" },
+    "vcmi": { label: "Vic's Custom Match-inator v20.0.2", url: root + "?ab=vcmi" },
+    "vcmi-v20.0.2": { label: "Vic's Custom Match-inator v20.0.2", url: root + "?ab=vcmi" }
   };
   const parts = location.pathname.split("/").filter(Boolean);
   const slug = parts.length > 1 ? decodeURIComponent(parts[parts.length - 1]).toLowerCase() : "";
