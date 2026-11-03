@@ -383,6 +383,9 @@
         if (versionChanged && isGameRunning) {
           sessionStorage.setItem('settings_applied', 'true');
           location.reload();
+        } else if (VERSION_CONFIG[sessionVersion] && VERSION_CONFIG[sessionVersion].externalUrl) {
+          unityLoaderPromise = Promise.resolve({ versionKey: sessionVersion, external: true });
+          document.getElementById('settings-popup').style.display = 'none';
         } else {
           prepareUnityLoader(sessionVersion).catch((error) => {
             console.error(error);
@@ -393,6 +396,14 @@
       }
 
       function handleLaunch() {
+        // External games do not use this repository's Unity loader files.
+        // Launch them directly so an older pending Unity-loader request cannot block them.
+        if (VERSION_CONFIG[sessionVersion] && VERSION_CONFIG[sessionVersion].externalUrl) {
+          document.getElementById('launch-screen').style.display = 'none';
+          startExternalGame();
+          return;
+        }
+
         document.getElementById('launch-screen').style.display = 'none';
         unityLoaderPromise
           .then((loadedLoader) => {
