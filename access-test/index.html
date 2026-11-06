@@ -247,6 +247,7 @@
             const savedHash = sessionStorage.getItem(sessionKey);
 
             let savedLoginRejected = false;
+            let savedAccountDisabled = false;
 
             // Older test sessions stored only "true"; they cannot be revalidated.
             // Clear them and ask the user to sign in once with the new session format.
@@ -268,15 +269,20 @@
                 return;
               }
 
-              // The account may have been disabled or its password changed.
+              // Distinguish a disabled account from an invalidated saved login.
               sessionStorage.removeItem(sessionKey);
               savedLoginRejected = true;
+              savedAccountDisabled = !!sessionResult.accountDisabled;
             }
 
-            title.textContent = savedLoginRejected ? "LOGIN NO LONGER AUTHORIZED" : "PASSWORD REQUIRED";
-            message.textContent = savedLoginRejected
-              ? "This saved login is no longer authorized. Please enter your password again."
-              : "This network requires an authorized personal password to access NSMB.";
+            title.textContent = savedAccountDisabled
+              ? "ACCOUNT DISABLED"
+              : (savedLoginRejected ? "LOGIN NO LONGER AUTHORIZED" : "PASSWORD REQUIRED");
+            message.textContent = savedAccountDisabled
+              ? "This account has been disabled. Please contact an administrator."
+              : (savedLoginRejected
+                ? "This saved login is no longer authorized. Please enter your password again."
+                : "This network requires an authorized personal password to access NSMB.");
             form.style.display = "block";
             passwordInput.focus();
           } catch (error) {
@@ -311,6 +317,11 @@
               message.textContent = result.person ? ("Welcome, " + result.person + ".") : "You're authorized. Welcome to NSMB!";
               form.style.display = "none";
               setTimeout(allowEntry, 650);
+            } else if (result && result.ok && result.accountDisabled) {
+              title.textContent = "ACCOUNT DISABLED";
+              message.textContent = "This account has been disabled. Please contact an administrator.";
+              form.style.display = "none";
+              errorText.textContent = "";
             } else if (result && result.ok) {
               errorText.textContent = "That password wasn't recognized. Please try again.";
               passwordInput.value = "";
