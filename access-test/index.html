@@ -243,9 +243,33 @@
               return;
             }
 
-            if (sessionStorage.getItem("nsmb_access_ok_" + currentIP) === "true") {
-              allowEntry();
-              return;
+            const sessionKey = "nsmb_access_ok_" + currentIP;
+            const savedHash = sessionStorage.getItem(sessionKey);
+
+            // Older test sessions stored only "true"; they cannot be revalidated.
+            // Clear them and ask the user to sign in once with the new session format.
+            if (savedHash === "true") {
+              sessionStorage.removeItem(sessionKey);
+            } else if (savedHash) {
+              const sessionResult = await jsonp({
+                action: "verify",
+                ip: currentIP,
+                hash: savedHash
+              });
+
+              if (!sessionResult || !sessionResult.ok) {
+                throw new Error((sessionResult && sessionResult.error) || "The saved login could not be checked.");
+              }
+
+              if (sessionResult.allowed) {
+                allowEntry();
+                return;
+              }
+
+              // The account may have been disabled or its password changed.
+              sessionStorage.removeItem(sessionKey);
+              title.textContent = "LOGIN NO LONGER AUTHORIZED";
+              message.textContent = "This saved login is no longer authorized. Please enter your password again.";
             }
 
             title.textContent = "PASSWORD REQUIRED";
@@ -279,7 +303,7 @@
             const hash = await hashPassword(password);
             const result = await jsonp({ action: "verify", ip: currentIP, hash });
             if (result && result.ok && result.allowed) {
-              sessionStorage.setItem("nsmb_access_ok_" + currentIP, "true");
+              sessionStorage.setItem("nsmb_access_ok_" + currentIP, hash);
               title.textContent = "ACCESS GRANTED";
               message.textContent = result.person ? ("Welcome, " + result.person + ".") : "You're authorized. Welcome to NSMB!";
               form.style.display = "none";
