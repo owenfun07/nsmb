@@ -246,6 +246,8 @@
             const sessionKey = "nsmb_access_ok_" + currentIP;
             const savedHash = sessionStorage.getItem(sessionKey);
 
+            let savedLoginRejected = false;
+
             // Older test sessions stored only "true"; they cannot be revalidated.
             // Clear them and ask the user to sign in once with the new session format.
             if (savedHash === "true") {
@@ -268,12 +270,13 @@
 
               // The account may have been disabled or its password changed.
               sessionStorage.removeItem(sessionKey);
-              title.textContent = "LOGIN NO LONGER AUTHORIZED";
-              message.textContent = "This saved login is no longer authorized. Please enter your password again.";
+              savedLoginRejected = true;
             }
 
-            title.textContent = "PASSWORD REQUIRED";
-            message.textContent = "This network requires an authorized personal password to access NSMB.";
+            title.textContent = savedLoginRejected ? "LOGIN NO LONGER AUTHORIZED" : "PASSWORD REQUIRED";
+            message.textContent = savedLoginRejected
+              ? "This saved login is no longer authorized. Please enter your password again."
+              : "This network requires an authorized personal password to access NSMB.";
             form.style.display = "block";
             passwordInput.focus();
           } catch (error) {
