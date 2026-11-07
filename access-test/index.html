@@ -110,51 +110,55 @@
       }
       .footer-link { position: absolute; bottom: 20px; left: 20px; color: #444; text-decoration: none; font-family: 'Courier New', monospace; font-size: 12px; }
 
-      /* NSMB security-check overlay */
+      /* Friendly, lightweight NSMB verification pop-up */
       #access-gate {
         position: fixed; inset: 0; z-index: 99999; display: flex;
         align-items: center; justify-content: center; padding: 20px;
-        box-sizing: border-box; background: rgba(0,0,0,.58);
-        backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
-        color: #fff; font-family: 'Courier New', monospace;
+        box-sizing: border-box; background: rgba(15,23,42,.16);
+        color: #243247; font-family: Arial, Helvetica, sans-serif;
       }
       #access-gate-card {
-        width: min(440px, 100%); box-sizing: border-box; padding: 30px;
-        border: 1px solid #555; border-radius: 14px;
-        background: rgba(20,20,20,.96);
-        box-shadow: 0 12px 55px rgba(0,0,0,.7); text-align: center;
+        width: min(390px, 100%); box-sizing: border-box; padding: 25px 28px;
+        border: 1px solid #e2e8f0; border-radius: 13px;
+        background: #fff; color: #243247;
+        box-shadow: 0 8px 30px rgba(15,23,42,.18); text-align: center;
       }
       #access-gate-status {
-        width: 34px; height: 34px; margin: 0 auto 18px;
-        border: 3px solid rgba(255,255,255,.18);
-        border-top-color: #e00000; border-radius: 50%;
-        animation: accessSpin .8s linear infinite;
+        width: 25px; height: 25px; margin: 0 auto 14px;
+        border: 3px solid #e7edf4; border-top-color: #4b91d1;
+        border-radius: 50%; animation: accessSpin .9s linear infinite;
       }
       @keyframes accessSpin { to { transform: rotate(360deg); } }
+      #access-gate-title { color: #26384d; font-size: 19px; font-weight: 600; }
+      #access-gate-card p { color: #64748b; }
       #access-gate.success #access-gate-status {
-        animation: none; border: 0; width: 38px; height: 38px;
+        animation: none; border: 0; width: 30px; height: 30px;
       }
       #access-gate.success #access-gate-status::after {
-        content: "✓"; display: block; color: #35d07f;
-        font: bold 38px Arial, sans-serif;
+        content: "✓"; display: block; color: #269b65;
+        font: bold 30px Arial, sans-serif;
       }
-      #access-gate.success #access-gate-card { border-color: #35a86d; }
-      #access-gate.success #access-gate-title { color: #65e6a0; }
-      #access-gate-card h2 { margin: 0 0 12px; color: #fff; }
-      #access-gate-card p { color: #bbb; line-height: 1.5; font-size: 14px; }
+      #access-gate.success #access-gate-card { border-color: #b8e4ce; }
+      #access-gate.success #access-gate-title { color: #238653; }
+      #access-gate-card h2 { margin: 0 0 9px; color: #26384d; }
+      #access-gate-card p { color: #64748b; line-height: 1.5; font-size: 14px; }
       #access-gate-card input {
-        width: 100%; box-sizing: border-box; padding: 13px; margin-top: 12px;
-        border: 1px solid #555; border-radius: 5px; background: #090909;
-        color: #fff; font: 16px 'Courier New', monospace;
+        width: 100%; box-sizing: border-box; padding: 12px; margin-top: 12px;
+        border: 1px solid #cbd5e1; border-radius: 7px; background: #fff;
+        color: #243247; font: 16px Arial, Helvetica, sans-serif;
+      }
+      #access-gate-card input:focus {
+        outline: 2px solid #9bc8ed; border-color: #4b91d1;
       }
       #access-gate-card button {
-        width: 100%; padding: 13px; margin-top: 12px; border: 0;
-        border-radius: 5px; background: #e00000; color: white;
-        font: bold 15px 'Courier New', monospace; cursor: pointer;
+        width: 100%; padding: 12px; margin-top: 12px; border: 0;
+        border-radius: 7px; background: #397fba; color: white;
+        font: 600 14px Arial, Helvetica, sans-serif; cursor: pointer;
       }
+      #access-gate-card button:hover { background: #2f70a8; }
       #access-gate-card button:disabled { opacity: .55; cursor: wait; }
-      #access-gate-error { min-height: 20px; color: #ff7777 !important; }
-      #access-gate-test-note { color: #ffcc66 !important; font-size: 11px !important; }
+      #access-gate-error { min-height: 20px; color: #c24141 !important; }
+      #access-gate-test-note { color: #a16207 !important; font-size: 11px !important; }
     </style>
   </head>
   <body>
@@ -262,8 +266,8 @@
           retryButton.style.display = "none";
           form.style.display = "none";
           errorText.textContent = "";
-          title.textContent = "PERFORMING SECURITY CHECK";
-          message.textContent = "Please wait while NSMB verifies this network. This should only take a moment.";
+          title.textContent = "Just a quick check...";
+          message.textContent = "We're checking this network. It should only take a moment!";
           try {
             currentIP = await getVisitorIP();
             const result = await jsonp({ action: "check", ip: currentIP });
@@ -309,12 +313,12 @@
             document.getElementById("access-gate-status").style.display = "none";
             title.textContent = savedAccountDisabled
               ? "ACCOUNT DISABLED"
-              : (savedLoginRejected ? "LOGIN NO LONGER AUTHORIZED" : "ADDITIONAL VERIFICATION REQUIRED");
+              : (savedLoginRejected ? "LOGIN NO LONGER AUTHORIZED" : "ONE QUICK STEP");
             message.textContent = savedAccountDisabled
               ? "This account has been disabled. Please contact an administrator."
               : (savedLoginRejected
                 ? "This saved login is no longer authorized. Please enter your password again."
-                : "It looks like you're playing on a restricted network, such as a school network. Please enter your personal password to continue.");
+                : "It looks like this may be a school network. Enter your personal password below and you'll be ready to play.");
             form.style.display = "block";
             passwordInput.focus();
           } catch (error) {
