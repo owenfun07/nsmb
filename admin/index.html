@@ -184,7 +184,7 @@
         const response = await fetch(DAILY_CODE_API + "?key=" + encodeURIComponent(DAILY_CODE_KEY) + "&_=" + Date.now(), { cache: "no-store" });
         if (!response.ok) throw new Error("HTTP " + response.status);
         const code = (await response.text()).trim();
-        if (!/^\\d{4}$/.test(code)) throw new Error("Invalid API response");
+        if (!/^\d{4}$/.test(code)) throw new Error("Invalid API response");
         dailyCodeElement.textContent = code;
         dailyCodeHint.textContent = "Share this code with someone who needs temporary access. It expires when your generator changes it.";
       } catch (error) {
