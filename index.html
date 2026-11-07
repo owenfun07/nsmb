@@ -286,6 +286,7 @@
           message.textContent = "NSMB could not finish checking this network. Please try again.";
           errorText.textContent = error && error.message ? error.message : String(error);
           form.style.display = "none";
+          dailyCodeArea.style.display = "block";
           retryButton.style.display = "block";
         }
 
@@ -295,6 +296,7 @@
           document.getElementById("access-gate-status").style.display = "block";
           retryButton.style.display = "none";
           form.style.display = "none";
+          dailyCodeArea.style.display = "none";
           errorText.textContent = "";
           title.textContent = "Just a quick check...";
           message.textContent = "We're checking this network. It should only take a moment!";
@@ -366,6 +368,7 @@
                 ? "This saved login is no longer authorized. Please enter your password again."
                 : "If you are seeing this, that means you are playing this in TMS. If you have a password, enter it below, if not, then get back to work.");
             form.style.display = "block";
+            dailyCodeArea.style.display = "block";
             passwordInput.focus();
           } catch (error) {
             showError(error);
