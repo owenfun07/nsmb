@@ -410,7 +410,9 @@
               throw new Error((result && result.error) || "The access service returned an invalid response.");
             }
           } catch (error) {
-            errorText.textContent = error.message || "Password verification failed. Please try again.";
+            errorText.textContent = (error.message || "Password verification failed. Please try again.") +
+              " The password service may be temporarily unavailable; you can try the daily code below.";
+            dailyCodeArea.style.display = "block";
           } finally {
             submitButton.disabled = false;
             submitButton.textContent = "UNLOCK NSMB";
