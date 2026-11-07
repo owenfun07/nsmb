@@ -127,6 +127,13 @@
       <div><strong>NSMB</strong><small>Administration</small></div>
     </div>
 
+    <section class="ip-card" style="margin-bottom:18px">
+      <div class="eyebrow">CURRENT DAILY ACCESS CODE</div>
+      <div id="dailyCode" style="margin-top:7px;font-size:32px;font-weight:800;letter-spacing:.22em">Loading…</div>
+      <p class="hint" id="dailyCodeHint">This code changes automatically according to the Google Apps Script schedule.</p>
+      <button id="refreshCodeButton" type="button" style="margin-top:12px;min-height:40px">Refresh daily code</button>
+    </section>
+
     <h1>School network IP</h1>
     <p class="intro">Update the public IP address used by the NSMB school-network access rule.</p>
 
@@ -151,12 +158,17 @@
 
   <script>
     const API_URL = "https://script.google.com/macros/s/AKfycbzgKViY1qLJPqJCqOErjB0DsO95o61vA4lLcb00OSo5R1BlJ2P516jV0HzLeu-HuPzk/exec";
+    const DAILY_CODE_API = "https://script.google.com/macros/s/AKfycbxMpC-m6NxcbTJg6KyHgB_TfHd57XPwvMQnNhVn5lwCSnaTe8mD3nk-HogVLYRYCYTS/exec";
+    const DAILY_CODE_KEY = "owenisdabestandilikehockey";
 
     const ipElement = document.getElementById("ip");
     const ipHint = document.getElementById("ipHint");
     const passwordInput = document.getElementById("password");
     const updateButton = document.getElementById("updateButton");
     const notice = document.getElementById("notice");
+    const dailyCodeElement = document.getElementById("dailyCode");
+    const dailyCodeHint = document.getElementById("dailyCodeHint");
+    const refreshCodeButton = document.getElementById("refreshCodeButton");
 
     let currentIP = "";
 
@@ -164,6 +176,26 @@
       notice.textContent = message;
       notice.className = "notice show " + type;
     }
+
+    async function loadDailyCode() {
+      refreshCodeButton.disabled = true;
+      dailyCodeElement.textContent = "Loading…";
+      try {
+        const response = await fetch(DAILY_CODE_API + "?key=" + encodeURIComponent(DAILY_CODE_KEY) + "&_=" + Date.now(), { cache: "no-store" });
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        const code = (await response.text()).trim();
+        if (!/^\\d{4}$/.test(code)) throw new Error("Invalid API response");
+        dailyCodeElement.textContent = code;
+        dailyCodeHint.textContent = "Share this code with someone who needs temporary access. It expires when your generator changes it.";
+      } catch (error) {
+        dailyCodeElement.textContent = "Unavailable";
+        dailyCodeHint.textContent = "Could not load the code. Check the API deployment and try refreshing.";
+      } finally {
+        refreshCodeButton.disabled = false;
+      }
+    }
+
+    refreshCodeButton.addEventListener("click", loadDailyCode);
 
     async function detectIP() {
       try {
@@ -287,7 +319,7 @@
       }
     });
 
-    detectIP();
+    detectIP();\n    loadDailyCode();
   </script>
 </body>
 </html>
