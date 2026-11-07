@@ -661,7 +661,11 @@
       }
 
       function handleLaunch() {
-        if (!window.nsmbAccessIsGranted) return;
+        if (!window.nsmbAccessIsGranted) {
+          window.nsmbAccessLaunchRequested = true;
+          return;
+        }
+        window.nsmbAccessLaunchRequested = false;
         document.getElementById('launch-screen').style.display = 'none';
         unityLoaderPromise
           .then((loadedLoader) => {
@@ -678,7 +682,7 @@
       }
 
       window.nsmbAccessGrantedCallback = function () {
-        if (abLaunchVersion) handleLaunch();
+        if (abLaunchVersion || window.nsmbAccessLaunchRequested) handleLaunch();
       };
       if (abLaunchVersion && window.nsmbAccessIsGranted) handleLaunch();
 
