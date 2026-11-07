@@ -109,9 +109,293 @@
         display: block;
       }
       .footer-link { position: absolute; bottom: 20px; left: 20px; color: #444; text-decoration: none; font-family: 'Courier New', monospace; font-size: 12px; }
+      /* Friendly, lightweight NSMB verification pop-up */
+      #access-gate {
+        position: fixed; inset: 0; z-index: 99999; display: flex;
+        align-items: center; justify-content: center; padding: 20px;
+        box-sizing: border-box; background: rgba(15,23,42,.16);
+        color: #243247; font-family: Arial, Helvetica, sans-serif;
+      }
+      #access-gate-card {
+        width: min(390px, 100%); box-sizing: border-box; padding: 25px 28px;
+        border: 1px solid #e2e8f0; border-radius: 13px;
+        background: #fff; color: #243247;
+        box-shadow: 0 8px 30px rgba(15,23,42,.18); text-align: center;
+      }
+      #access-gate-status {
+        width: 25px; height: 25px; margin: 0 auto 14px;
+        border: 3px solid #e7edf4; border-top-color: #4b91d1;
+        border-radius: 50%; animation: accessSpin .9s linear infinite;
+      }
+      @keyframes accessSpin { to { transform: rotate(360deg); } }
+      #access-gate-title { color: #26384d; font-size: 19px; font-weight: 600; }
+      #access-gate-card p { color: #64748b; }
+      #access-gate.success #access-gate-status {
+        animation: none; border: 0; width: 30px; height: 30px;
+      }
+      #access-gate.success #access-gate-status::after {
+        content: "✓"; display: block; color: #269b65;
+        font: bold 30px Arial, sans-serif;
+      }
+      #access-gate.success #access-gate-card { border-color: #b8e4ce; }
+      #access-gate.success #access-gate-title { color: #238653; }
+      #access-gate-card h2 { margin: 0 0 9px; color: #26384d; }
+      #access-gate-card p { color: #64748b; line-height: 1.5; font-size: 14px; }
+      #access-gate-card input {
+        width: 100%; box-sizing: border-box; padding: 12px; margin-top: 12px;
+        border: 1px solid #cbd5e1; border-radius: 7px; background: #fff;
+        color: #243247; font: 16px Arial, Helvetica, sans-serif;
+      }
+      #access-gate-card input:focus {
+        outline: 2px solid #9bc8ed; border-color: #4b91d1;
+      }
+      #access-gate-card button {
+        width: 100%; padding: 12px; margin-top: 12px; border: 0;
+        border-radius: 7px; background: #397fba; color: white;
+        font: 600 14px Arial, Helvetica, sans-serif; cursor: pointer;
+      }
+      #access-gate-card button:hover { background: #2f70a8; }
+      #access-gate-card button:disabled { opacity: .55; cursor: wait; }
+      #access-gate-error { min-height: 20px; color: #c24141 !important; }
+      #access-gate-test-note { color: #a16207 !important; font-size: 11px !important; }
+
     </style>
   </head>
   <body>
+
+    <div id="access-gate">
+      <div id="access-gate-card">
+        <div id="access-gate-status" aria-hidden="true"></div>
+        <h2 id="access-gate-title">PERFORMING SECURITY CHECK</h2>
+        <p id="access-gate-message">Please wait while NSMB verifies this network. This should only take a moment.</p>
+        <form id="access-gate-form" style="display:none">
+          <input id="access-gate-password" type="password" autocomplete="current-password"
+                 placeholder="Enter your personal password" aria-label="Personal password" required>
+          <button id="access-gate-submit" type="submit">UNLOCK NSMB</button>
+        </form>
+        <p id="access-gate-error" role="status"></p>
+        <button id="access-gate-retry" type="button" style="display:none">RETRY CHECK</button>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        const ACCESS_API = "https://script.google.com/macros/s/AKfycbzgKViY1qLJPqJCqOErjB0DsO95o61vA4lLcb00OSo5R1BlJ2P516jV0HzLeu-HuPzk/exec";
+        const gate = document.getElementById("access-gate");
+        const title = document.getElementById("access-gate-title");
+        const message = document.getElementById("access-gate-message");
+        const form = document.getElementById("access-gate-form");
+        const passwordInput = document.getElementById("access-gate-password");
+        const submitButton = document.getElementById("access-gate-submit");
+        const errorText = document.getElementById("access-gate-error");
+        const retryButton = document.getElementById("access-gate-retry");
+        let currentIP = "";
+
+        function jsonp(params) {
+          return new Promise((resolve, reject) => {
+            const callback = "nsmbAccessCallback_" + Math.random().toString(36).slice(2);
+            const script = document.createElement("script");
+            let finished = false;
+            const cleanup = () => {
+              if (finished) return;
+              finished = true;
+              clearTimeout(timer);
+              delete window[callback];
+              script.remove();
+            };
+            const timer = setTimeout(() => {
+              cleanup();
+              reject(new Error("The access service took too long to respond."));
+            }, 15000);
+
+            window[callback] = (data) => {
+              cleanup();
+              resolve(data);
+            };
+            script.onerror = () => {
+              cleanup();
+              reject(new Error("Could not contact the access service."));
+            };
+            const query = new URLSearchParams({ ...params, callback }).toString();
+            script.src = ACCESS_API + "?" + query;
+            document.head.appendChild(script);
+          });
+        }
+
+        const hadSuccessfulCheck =
+          sessionStorage.getItem("nsmb_access_recently_passed") === "true";
+
+        // Returning visitors keep seeing the launcher while their access is rechecked.
+        if (hadSuccessfulCheck) gate.style.display = "none";
+
+        async function getVisitorIP() {
+          const response = await fetch("https://api.ipify.org?format=json", { cache: "no-store" });
+          if (!response.ok) throw new Error("Could not determine this network's public IP address.");
+          const data = await response.json();
+          if (!data.ip) throw new Error("The IP lookup service did not return an address.");
+          return data.ip;
+        }
+
+        function markAccessGranted() {
+          window.nsmbAccessIsGranted = true;
+          if (typeof window.nsmbAccessGrantedCallback === "function") {
+            window.nsmbAccessGrantedCallback();
+          }
+        }
+
+        function allowEntry(silent = false) {
+          sessionStorage.setItem("nsmb_access_recently_passed", "true");
+          markAccessGranted();
+
+          if (silent) {
+            gate.style.display = "none";
+            return;
+          }
+
+          gate.style.display = "flex";
+          gate.classList.add("success");
+          title.textContent = "SECURITY CHECK PASSED";
+          message.textContent = "You're all set. Welcome to NSMB!";
+          form.style.display = "none";
+          retryButton.style.display = "none";
+          errorText.textContent = "";
+          setTimeout(() => {
+            gate.style.display = "none";
+          }, 700);
+        }
+
+        function showError(error) {
+          gate.style.display = "flex";
+          gate.classList.remove("success");
+          document.getElementById("access-gate-status").style.display = "none";
+          title.textContent = "ACCESS CHECK FAILED";
+          message.textContent = "NSMB could not finish checking this network. Please try again.";
+          errorText.textContent = error && error.message ? error.message : String(error);
+          form.style.display = "none";
+          retryButton.style.display = "block";
+        }
+
+        async function checkNetwork(silent = false) {
+          if (!silent) gate.style.display = "flex";
+          gate.classList.remove("success");
+          document.getElementById("access-gate-status").style.display = "block";
+          retryButton.style.display = "none";
+          form.style.display = "none";
+          errorText.textContent = "";
+          title.textContent = "Just a quick check...";
+          message.textContent = "We're checking this network. It should only take a moment!";
+          try {
+            currentIP = await getVisitorIP();
+            const result = await jsonp({ action: "check", ip: currentIP });
+            if (!result || !result.ok) throw new Error((result && result.error) || "The access service returned an invalid response.");
+
+            if (!result.restricted) {
+              allowEntry(silent);
+              return;
+            }
+
+            const sessionKey = "nsmb_access_ok_" + currentIP;
+            const savedHash = sessionStorage.getItem(sessionKey);
+
+            let savedLoginRejected = false;
+            let savedAccountDisabled = false;
+
+            // Older test sessions stored only "true"; they cannot be revalidated.
+            // Clear them and ask the user to sign in once with the new session format.
+            if (savedHash === "true") {
+              sessionStorage.removeItem(sessionKey);
+            } else if (savedHash) {
+              const sessionResult = await jsonp({
+                action: "verify",
+                ip: currentIP,
+                hash: savedHash
+              });
+
+              if (!sessionResult || !sessionResult.ok) {
+                throw new Error((sessionResult && sessionResult.error) || "The saved login could not be checked.");
+              }
+
+              if (sessionResult.allowed) {
+                allowEntry(silent);
+                return;
+              }
+
+              // Distinguish a disabled account from an invalidated saved login.
+              sessionStorage.removeItem(sessionKey);
+              savedLoginRejected = true;
+              savedAccountDisabled = !!sessionResult.accountDisabled;
+            }
+
+            gate.style.display = "flex";
+            document.getElementById("access-gate-status").style.display = "none";
+            title.textContent = savedAccountDisabled
+              ? "ACCOUNT DISABLED"
+              : (savedLoginRejected ? "LOGIN NO LONGER AUTHORIZED" : "ONE QUICK STEP");
+            message.textContent = savedAccountDisabled
+              ? "This account has been disabled. Please contact an administrator."
+              : (savedLoginRejected
+                ? "This saved login is no longer authorized. Please enter your password again."
+                : "It looks like this may be a school network. Enter your personal password below and you'll be ready to play.");
+            form.style.display = "block";
+            passwordInput.focus();
+          } catch (error) {
+            showError(error);
+          }
+        }
+
+        async function hashPassword(password) {
+          if (!window.crypto || !crypto.subtle) {
+            throw new Error("Secure password hashing is unavailable in this browser.");
+          }
+          const bytes = new TextEncoder().encode(password);
+          const digest = await crypto.subtle.digest("SHA-256", bytes);
+          let binary = "";
+          new Uint8Array(digest).forEach(byte => binary += String.fromCharCode(byte));
+          return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+        }
+
+        form.addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const password = passwordInput.value;
+          if (!password) return;
+          submitButton.disabled = true;
+          submitButton.textContent = "CHECKING...";
+          errorText.textContent = "";
+          try {
+            const hash = await hashPassword(password);
+            const result = await jsonp({ action: "verify", ip: currentIP, hash });
+            if (result && result.ok && result.allowed) {
+              sessionStorage.setItem("nsmb_access_ok_" + currentIP, hash);
+              title.textContent = "ACCESS GRANTED";
+              message.textContent = result.person ? ("Welcome, " + result.person + ".") : "You're authorized. Welcome to NSMB!";
+              form.style.display = "none";
+              setTimeout(allowEntry, 650);
+            } else if (result && result.ok && result.accountDisabled) {
+              document.getElementById("access-gate-status").style.display = "none";
+              title.textContent = "ACCOUNT DISABLED";
+              message.textContent = "This account has been disabled. Please contact an administrator.";
+              form.style.display = "none";
+              errorText.textContent = "";
+            } else if (result && result.ok) {
+              errorText.textContent = "That password wasn't recognized. Please try again.";
+              passwordInput.value = "";
+              passwordInput.focus();
+            } else {
+              throw new Error((result && result.error) || "The access service returned an invalid response.");
+            }
+          } catch (error) {
+            errorText.textContent = error.message || "Password verification failed. Please try again.";
+          } finally {
+            submitButton.disabled = false;
+            submitButton.textContent = "UNLOCK NSMB";
+          }
+        });
+
+        retryButton.addEventListener("click", () => checkNetwork(false));
+        checkNetwork(hadSuccessfulCheck);
+      })();
+    </script>
+
 
     <iframe id="hidden-tracker" style="display:none" src="https://script.google.com/macros/s/AKfycbywjpKkBfFRXkOyuBarYJ8PwDVbW1iPjUjqvu-ROy4tT_d1hauRFKW3YRuGuo4_5yN_/exec"></iframe>
 
@@ -306,7 +590,6 @@
           updateLaunchButton();
           document.getElementById('version-select').value = sessionVersion;
           document.getElementById('persistence-popup').style.display = 'none';
-          handleLaunch();
         } else if (sessionStorage.getItem('settings_applied') === 'true') {
           sessionStorage.removeItem('settings_applied');
           sessionVersion = normalizeSessionVersion(localStorage.getItem('mario_last_session') || 'regular');
@@ -378,6 +661,7 @@
       }
 
       function handleLaunch() {
+        if (!window.nsmbAccessIsGranted) return;
         document.getElementById('launch-screen').style.display = 'none';
         unityLoaderPromise
           .then((loadedLoader) => {
@@ -392,6 +676,11 @@
             alert("Could not load the selected Unity version.");
           });
       }
+
+      window.nsmbAccessGrantedCallback = function () {
+        if (abLaunchVersion) handleLaunch();
+      };
+      if (abLaunchVersion && window.nsmbAccessIsGranted) handleLaunch();
 
       function startRegular(createUnityInstanceForVersion) {
         document.getElementById('unity-loader-ready').style.display = 'flex';
