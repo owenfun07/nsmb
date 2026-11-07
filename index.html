@@ -425,13 +425,13 @@
           const response = await fetch(url, { cache: "no-store" });
           if (!response.ok) throw new Error("Daily-code service returned HTTP " + response.status + ".");
           const code = (await response.text()).trim();
-          if (!/^\\d{4}$/.test(code)) throw new Error("Daily-code service returned an invalid response.");
+          if (!/^\d{4}$/.test(code)) throw new Error("Daily-code service returned an invalid response.");
           return code;
         }
 
         dailyCodeSubmit.addEventListener("click", async () => {
           const entered = dailyCodeInput.value.trim();
-          if (!/^\\d{4}$/.test(entered)) {
+          if (!/^\d{4}$/.test(entered)) {
             errorText.textContent = "Enter all four digits of the daily code.";
             dailyCodeInput.focus();
             return;
