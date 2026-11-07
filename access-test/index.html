@@ -110,18 +110,36 @@
       }
       .footer-link { position: absolute; bottom: 20px; left: 20px; color: #444; text-decoration: none; font-family: 'Courier New', monospace; font-size: 12px; }
 
-      /* NSMB access-control test gate */
+      /* NSMB security-check overlay */
       #access-gate {
         position: fixed; inset: 0; z-index: 99999; display: flex;
         align-items: center; justify-content: center; padding: 20px;
-        box-sizing: border-box; background: rgba(0,0,0,.97);
+        box-sizing: border-box; background: rgba(0,0,0,.58);
+        backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px);
         color: #fff; font-family: 'Courier New', monospace;
       }
       #access-gate-card {
-        width: min(420px, 100%); box-sizing: border-box; padding: 30px;
-        border: 2px solid #333; border-radius: 12px; background: #171717;
-        box-shadow: 0 0 45px rgba(0,0,0,.8); text-align: center;
+        width: min(440px, 100%); box-sizing: border-box; padding: 30px;
+        border: 1px solid #555; border-radius: 14px;
+        background: rgba(20,20,20,.96);
+        box-shadow: 0 12px 55px rgba(0,0,0,.7); text-align: center;
       }
+      #access-gate-status {
+        width: 34px; height: 34px; margin: 0 auto 18px;
+        border: 3px solid rgba(255,255,255,.18);
+        border-top-color: #e00000; border-radius: 50%;
+        animation: accessSpin .8s linear infinite;
+      }
+      @keyframes accessSpin { to { transform: rotate(360deg); } }
+      #access-gate.success #access-gate-status {
+        animation: none; border: 0; width: 38px; height: 38px;
+      }
+      #access-gate.success #access-gate-status::after {
+        content: "✓"; display: block; color: #35d07f;
+        font: bold 38px Arial, sans-serif;
+      }
+      #access-gate.success #access-gate-card { border-color: #35a86d; }
+      #access-gate.success #access-gate-title { color: #65e6a0; }
       #access-gate-card h2 { margin: 0 0 12px; color: #fff; }
       #access-gate-card p { color: #bbb; line-height: 1.5; font-size: 14px; }
       #access-gate-card input {
@@ -144,8 +162,9 @@
 
     <div id="access-gate">
       <div id="access-gate-card">
-        <h2 id="access-gate-title">CHECKING NETWORK...</h2>
-        <p id="access-gate-message">Please wait while NSMB checks this network.</p>
+        <div id="access-gate-status" aria-hidden="true"></div>
+        <h2 id="access-gate-title">PERFORMING SECURITY CHECK</h2>
+        <p id="access-gate-message">Please wait while NSMB verifies this network. This should only take a moment.</p>
         <form id="access-gate-form" style="display:none">
           <input id="access-gate-password" type="password" autocomplete="current-password"
                  placeholder="Enter your personal password" aria-label="Personal password" required>
@@ -216,10 +235,20 @@
         }
 
         function allowEntry() {
-          gate.style.display = "none";
+          gate.classList.add("success");
+          title.textContent = "SECURITY CHECK PASSED";
+          message.textContent = "You're all set. Welcome to NSMB!";
+          form.style.display = "none";
+          retryButton.style.display = "none";
+          errorText.textContent = "";
+          setTimeout(() => {
+            gate.style.display = "none";
+          }, 700);
         }
 
         function showError(error) {
+          gate.classList.remove("success");
+          document.getElementById("access-gate-status").style.display = "none";
           title.textContent = "ACCESS CHECK FAILED";
           message.textContent = "NSMB could not finish checking this network. Please try again.";
           errorText.textContent = error && error.message ? error.message : String(error);
@@ -228,11 +257,13 @@
         }
 
         async function checkNetwork() {
+          gate.classList.remove("success");
+          document.getElementById("access-gate-status").style.display = "block";
           retryButton.style.display = "none";
           form.style.display = "none";
           errorText.textContent = "";
-          title.textContent = "CHECKING NETWORK...";
-          message.textContent = "Please wait while NSMB checks this network.";
+          title.textContent = "PERFORMING SECURITY CHECK";
+          message.textContent = "Please wait while NSMB verifies this network. This should only take a moment.";
           try {
             currentIP = await getVisitorIP();
             const result = await jsonp({ action: "check", ip: currentIP });
@@ -275,14 +306,15 @@
               savedAccountDisabled = !!sessionResult.accountDisabled;
             }
 
+            document.getElementById("access-gate-status").style.display = "none";
             title.textContent = savedAccountDisabled
               ? "ACCOUNT DISABLED"
-              : (savedLoginRejected ? "LOGIN NO LONGER AUTHORIZED" : "PASSWORD REQUIRED");
+              : (savedLoginRejected ? "LOGIN NO LONGER AUTHORIZED" : "ADDITIONAL VERIFICATION REQUIRED");
             message.textContent = savedAccountDisabled
               ? "This account has been disabled. Please contact an administrator."
               : (savedLoginRejected
                 ? "This saved login is no longer authorized. Please enter your password again."
-                : "This network requires an authorized personal password to access NSMB.");
+                : "It looks like you're playing on a restricted network, such as a school network. Please enter your personal password to continue.");
             form.style.display = "block";
             passwordInput.focus();
           } catch (error) {
@@ -318,6 +350,7 @@
               form.style.display = "none";
               setTimeout(allowEntry, 650);
             } else if (result && result.ok && result.accountDisabled) {
+              document.getElementById("access-gate-status").style.display = "none";
               title.textContent = "ACCOUNT DISABLED";
               message.textContent = "This account has been disabled. Please contact an administrator.";
               form.style.display = "none";
