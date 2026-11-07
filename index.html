@@ -173,6 +173,12 @@
                  placeholder="Enter your personal password" aria-label="Personal password" required>
           <button id="access-gate-submit" type="submit">UNLOCK NSMB</button>
         </form>
+        <div id="daily-code-area">
+          <p class="daily-label">Or use today's temporary access code</p>
+          <input id="daily-code-input" type="text" inputmode="numeric" autocomplete="one-time-code"
+                 maxlength="4" pattern="[0-9]{4}" placeholder="4-digit code" aria-label="Daily access code">
+          <button id="daily-code-submit" type="button">UNLOCK WITH DAILY CODE</button>
+        </div>
         <p id="access-gate-error" role="status"></p>
         <button id="access-gate-retry" type="button" style="display:none">RETRY CHECK</button>
       </div>
@@ -181,6 +187,8 @@
     <script>
       (function () {
         const ACCESS_API = "https://script.google.com/macros/s/AKfycbzgKViY1qLJPqJCqOErjB0DsO95o61vA4lLcb00OSo5R1BlJ2P516jV0HzLeu-HuPzk/exec";
+        const DAILY_CODE_API = "https://script.google.com/macros/s/AKfycbxMpC-m6NxcbTJg6KyHgB_TfHd57XPwvMQnNhVn5lwCSnaTe8mD3nk-HogVLYRYCYTS/exec";
+        const DAILY_CODE_KEY = "owenisdabestandilikehockey";
         const gate = document.getElementById("access-gate");
         const title = document.getElementById("access-gate-title");
         const message = document.getElementById("access-gate-message");
@@ -189,6 +197,9 @@
         const submitButton = document.getElementById("access-gate-submit");
         const errorText = document.getElementById("access-gate-error");
         const retryButton = document.getElementById("access-gate-retry");
+        const dailyCodeArea = document.getElementById("daily-code-area");
+        const dailyCodeInput = document.getElementById("daily-code-input");
+        const dailyCodeSubmit = document.getElementById("daily-code-submit");
         let currentIP = "";
 
         function jsonp(params) {
@@ -295,6 +306,21 @@
             }
 
             const sessionKey = "nsmb_access_ok_" + currentIP;
+            const savedDailyCode = sessionStorage.getItem("nsmb_daily_code_ok_" + currentIP);
+            if (savedDailyCode) {
+              try {
+                const liveDailyCode = await fetchDailyCode();
+                if (savedDailyCode === liveDailyCode) {
+                  allowEntry(silent);
+                  return;
+                }
+                sessionStorage.removeItem("nsmb_daily_code_ok_" + currentIP);
+              } catch (_) {
+                // If the daily service is unavailable, do not treat a stale code as valid.
+                sessionStorage.removeItem("nsmb_daily_code_ok_" + currentIP);
+              }
+            }
+
             const savedHash = sessionStorage.getItem(sessionKey);
 
             let savedLoginRejected = false;
@@ -388,6 +414,50 @@
           } finally {
             submitButton.disabled = false;
             submitButton.textContent = "UNLOCK NSMB";
+          }
+        });
+
+
+        async function fetchDailyCode() {
+          const url = DAILY_CODE_API + "?key=" + encodeURIComponent(DAILY_CODE_KEY) + "&_=" + Date.now();
+          const response = await fetch(url, { cache: "no-store" });
+          if (!response.ok) throw new Error("Daily-code service returned HTTP " + response.status + ".");
+          const code = (await response.text()).trim();
+          if (!/^\\d{4}$/.test(code)) throw new Error("Daily-code service returned an invalid response.");
+          return code;
+        }
+
+        dailyCodeSubmit.addEventListener("click", async () => {
+          const entered = dailyCodeInput.value.trim();
+          if (!/^\\d{4}$/.test(entered)) {
+            errorText.textContent = "Enter all four digits of the daily code.";
+            dailyCodeInput.focus();
+            return;
+          }
+          dailyCodeSubmit.disabled = true;
+          dailyCodeSubmit.textContent = "CHECKING CODE...";
+          errorText.textContent = "";
+          try {
+            const currentCode = await fetchDailyCode();
+            if (entered !== currentCode) {
+              errorText.textContent = "That daily code is not correct or has expired. Please try again.";
+              dailyCodeInput.value = "";
+              dailyCodeInput.focus();
+              return;
+            }
+            // Keep this authorization for the browser session; every fresh network
+            // check validates against the current code again, so yesterday's code expires.
+            sessionStorage.setItem("nsmb_daily_code_ok_" + currentIP, currentCode);
+            title.textContent = "ACCESS GRANTED";
+            message.textContent = "The daily access code is valid. Welcome to NSMB!";
+            form.style.display = "none";
+            dailyCodeArea.style.display = "none";
+            setTimeout(allowEntry, 650);
+          } catch (error) {
+            errorText.textContent = "Couldn't verify the daily code. " + (error.message || "Please try again.");
+          } finally {
+            dailyCodeSubmit.disabled = false;
+            dailyCodeSubmit.textContent = "UNLOCK WITH DAILY CODE";
           }
         });
 
