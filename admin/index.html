@@ -11,7 +11,7 @@
 main{width:min(100%,1000px);padding:28px;border:1px solid #e5eaf2;border-radius:22px;background:rgba(255,255,255,.97);box-shadow:0 18px 55px rgba(28,45,78,.09)}
 .brand{display:flex;align-items:center;gap:12px;margin-bottom:24px}.brand-mark{width:42px;height:42px;display:grid;place-items:center;border-radius:13px;color:white;background:linear-gradient(145deg,#3978f6,#2457cf);font-weight:800}.brand small{display:block;color:#77839a;font-size:12px;margin-top:3px}
 h1{margin:0;font-size:25px;letter-spacing:-.035em}h2{margin:0 0 7px;font-size:18px}.intro{margin:8px 0 22px;color:#64718a;line-height:1.55;font-size:14px}
-label{display:block;margin:18px 0 8px;font-size:13px;font-weight:700}input{width:100%;min-height:46px;padding:11px 13px;border:1px solid #d8dfeb;border-radius:11px;outline:none;background:white;color:#172033;font:inherit;font-size:14px}input:focus{border-color:#3978f6;box-shadow:0 0 0 3px rgba(57,120,246,.13)}
+label{display:block;margin:18px 0 8px;font-size:13px;font-weight:700}input,select{width:100%;min-height:46px;padding:11px 13px;border:1px solid #d8dfeb;border-radius:11px;outline:none;background:white;color:#172033;font:inherit;font-size:14px}input:focus,select:focus{border-color:#3978f6;box-shadow:0 0 0 3px rgba(57,120,246,.13)}
 button{min-height:40px;padding:0 14px;margin-top:10px;border:0;border-radius:10px;background:#2865e8;color:white;font:inherit;font-size:13px;font-weight:750;cursor:pointer}button:hover{background:#1f55cb}button:disabled{cursor:wait;opacity:.55}.secondary{background:#edf3ff;color:#2858b5}.secondary:hover{background:#e0eaff}.danger{background:#fff0f0;color:#9c3434}.danger:hover{background:#ffe3e3}
 .card{padding:18px;border:1px solid #e3eaf5;border-radius:14px;background:#f8faff;margin:16px 0}.eyebrow{color:#78849a;font-size:11px;font-weight:800;letter-spacing:.08em}.hint{margin:8px 0 0;color:#7b879b;font-size:12px;line-height:1.45}
 .notice{display:none;margin-top:14px;padding:12px 13px;border-radius:11px;font-size:13px;line-height:1.5}.notice.show{display:block}.notice.info{color:#315b9d;background:#eef5ff}.notice.success{color:#17633d;background:#eaf8f0}.notice.error{color:#9c3434;background:#fff0f0}
@@ -55,6 +55,19 @@ button{min-height:40px;padding:0 14px;margin-top:10px;border:0;border-radius:10p
     </div>
 
     <section class="card">
+      <h2>Create an account</h2>
+      <p class="hint">Create a new enabled NSMB account. Passwords are hashed in your browser before being sent to the server.</p>
+      <div class="grid">
+        <div><label for="newAccountName">Person's name</label><input id="newAccountName" type="text" maxlength="80" autocomplete="off" placeholder="Enter their name"></div>
+        <div><label for="newAccountRole">Account type</label><select id="newAccountRole"><option value="false">Standard user</option><option value="true">Administrator</option></select></div>
+        <div><label for="newAccountPassword">Password</label><input id="newAccountPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters"></div>
+        <div><label for="confirmAccountPassword">Confirm password</label><input id="confirmAccountPassword" type="password" autocomplete="new-password" placeholder="Enter the password again"></div>
+      </div>
+      <button id="createAccountButton" type="button">Create account</button>
+      <div id="createAccountNotice" class="notice" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="card">
       <div class="topbar"><div><h2>Account management</h2><p class="hint" style="margin:0">Enable or disable existing authorized users.</p></div><button id="refreshAccountsButton" class="secondary" type="button">Refresh accounts</button></div>
       <div class="history-wrap">
         <table style="min-width:480px"><thead><tr><th>Account</th><th>Role</th><th>Status</th><th>Action</th></tr></thead><tbody id="accountsBody"><tr><td colspan="4" class="empty">Loading accounts…</td></tr></tbody></table>
@@ -63,7 +76,7 @@ button{min-height:40px;padding:0 14px;margin-top:10px;border:0;border-radius:10p
     </section>
 
     <section class="card">
-      <div class="topbar"><div><h2>Admin logs</h2><p class="hint" style="margin:0">Successful administrator sign-ins and school IP changes.</p></div><button id="refreshAdminHistoryButton" class="secondary" type="button">Refresh</button></div>
+      <div class="topbar"><div><h2>Admin logs</h2><p class="hint" style="margin:0">Administrator sign-ins, account changes, and school IP changes.</p></div><button id="refreshAdminHistoryButton" class="secondary" type="button">Refresh</button></div>
       <div class="history-wrap">
         <table><thead><tr><th>Time</th><th>IP address</th><th>Admin</th><th>Event</th><th>Details</th></tr></thead><tbody id="adminHistoryBody"><tr><td colspan="5" class="empty">Loading admin logs…</td></tr></tbody></table>
       </div>
@@ -73,7 +86,7 @@ button{min-height:40px;padding:0 14px;margin-top:10px;border:0;border-radius:10p
     <section class="card">
       <div class="topbar"><div><h2>Regular site logs</h2><p class="hint" style="margin:0">Network checks and password verification attempts.</p></div><button id="refreshSiteHistoryButton" class="secondary" type="button">Refresh</button></div><label style="display:flex;align-items:center;gap:9px;margin:14px 0 0;font-weight:600"><input id="hideUnrestrictedLogs" type="checkbox" style="width:16px;min-height:16px;margin:0"> Hide unrestricted visitors who are not logged in</label>
       <div class="history-wrap">
-        <table><thead><tr><th>Time</th><th>IP address</th><th>User</th><th>Event</th><th>Result</th><th>Details</th></tr></thead><tbody id="siteHistoryBody"><tr><td colspan="6" class="empty">Loading site logs…</td></tr></tbody></table>
+        <table><thead><tr><th>Time</th><th>IP address</th><th>User</th><th>Event</th><th>Result</th><th>Attempts</th><th>Details</th></tr></thead><tbody id="siteHistoryBody"><tr><td colspan="7" class="empty">Loading site logs…</td></tr></tbody></table>
       </div>
       <p class="hint" id="siteHistoryHint">Showing up to 200 recent events.</p>
     </section>
@@ -105,13 +118,32 @@ async function detectIP(){const ip=await getPublicIP();if(!ip||ip.length>45||/\s
 $("updateButton").addEventListener("click",async()=>{if(!currentIP)return;if(!confirm("Update the School Network entry to "+currentIP+"?\n\nOnly continue if you're connected to your school's Wi-Fi."))return;const button=$("updateButton");button.disabled=true;button.textContent="Updating…";try{const result=await protectedCall("updateSchoolIP",{ip:currentIP});if(result&&result.ok&&result.updated){notice("dashboardNotice","Success! The School Network entry now uses "+result.ip+".","success");loadAdminHistory()}else throw new Error(result&&result.error||"The IP address could not be updated.")}catch(error){notice("dashboardNotice",error.message,"error")}finally{button.disabled=false;button.textContent="Update School IP"}});
 function escapeHTML(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 let cachedSiteHistory=[];
-function renderRows(bodyId,rows,columns,kind){const body=$(bodyId);if(!Array.isArray(rows)||!rows.length){body.innerHTML='<tr><td colspan="'+columns+'" class="empty">No events recorded yet.</td></tr>';return}body.innerHTML=rows.map(row=>{const vals=kind==="admin"?[row.time,row.ip,row.user,row.event,row.details]:[row.time,row.ip,row.user,row.event,row.result,row.details];return "<tr>"+vals.map(v=>"<td>"+escapeHTML(v)+"</td>").join("")+"</tr>"}).join("")}
-function renderSiteHistory(){const hide=$("hideUnrestrictedLogs").checked;const visible=hide?cachedSiteHistory.filter(row=>!(row.event==="Network check"&&row.result==="Unrestricted"&&!String(row.user||"").trim())):cachedSiteHistory;renderRows("siteHistoryBody",visible,6,"site");$("siteHistoryHint").textContent="Showing "+visible.length+" of "+cachedSiteHistory.length+" events."}
+function renderRows(bodyId,rows,columns,kind){const body=$(bodyId);if(!Array.isArray(rows)||!rows.length){body.innerHTML='<tr><td colspan="'+columns+'" class="empty">No events recorded yet.</td></tr>';return}body.innerHTML=rows.map(row=>{const vals=kind==="admin"?[row.time,row.ip,row.user,row.event,row.details]:[row.time,row.ip,row.user,row.event,row.result,(row.attempts||0),row.details];return "<tr>"+vals.map(v=>"<td>"+escapeHTML(v)+"</td>").join("")+"</tr>"}).join("")}
+function renderSiteHistory(){const hide=$("hideUnrestrictedLogs").checked;const visible=hide?cachedSiteHistory.filter(row=>!(row.event==="Network check"&&row.result==="Unrestricted"&&!String(row.user||"").trim())):cachedSiteHistory;renderRows("siteHistoryBody",visible,7,"site");$("siteHistoryHint").textContent="Showing "+visible.length+" of "+cachedSiteHistory.length+" events."}
 async function loadAdminHistory(){const body=$("adminHistoryBody");body.innerHTML='<tr><td colspan="5" class="empty">Loading admin logs…</td></tr>';$("refreshAdminHistoryButton").disabled=true;try{const r=await protectedCall("adminHistory");if(!r||!r.ok)throw new Error(r&&r.error||"Could not load admin logs.");renderRows("adminHistoryBody",r.history,5,"admin");$("adminHistoryHint").textContent="Showing "+(r.history||[]).length+" recent events."}catch(e){body.innerHTML='<tr><td colspan="5" class="empty">'+escapeHTML(e.message)+'</td></tr>'}finally{$("refreshAdminHistoryButton").disabled=false}}
-async function loadSiteHistory(){const body=$("siteHistoryBody");body.innerHTML='<tr><td colspan="6" class="empty">Loading site logs…</td></tr>';$("refreshSiteHistoryButton").disabled=true;try{const r=await protectedCall("adminSiteHistory");if(!r||!r.ok)throw new Error(r&&r.error||"Could not load site logs.");cachedSiteHistory=Array.isArray(r.history)?r.history:[];renderSiteHistory()}catch(e){body.innerHTML='<tr><td colspan="6" class="empty">'+escapeHTML(e.message)+'</td></tr>'}finally{$("refreshSiteHistoryButton").disabled=false}}
+async function loadSiteHistory(){const body=$("siteHistoryBody");body.innerHTML='<tr><td colspan="7" class="empty">Loading site logs…</td></tr>';$("refreshSiteHistoryButton").disabled=true;try{const r=await protectedCall("adminSiteHistory");if(!r||!r.ok)throw new Error(r&&r.error||"Could not load site logs.");cachedSiteHistory=Array.isArray(r.history)?r.history:[];renderSiteHistory()}catch(e){body.innerHTML='<tr><td colspan="7" class="empty">'+escapeHTML(e.message)+'</td></tr>'}finally{$("refreshSiteHistoryButton").disabled=false}}
 $("refreshAdminHistoryButton").addEventListener("click",loadAdminHistory);$("refreshSiteHistoryButton").addEventListener("click",loadSiteHistory);
 async function loadAccounts(){const body=$("accountsBody");body.innerHTML='<tr><td colspan="4" class="empty">Loading accounts…</td></tr>';$("refreshAccountsButton").disabled=true;try{const r=await protectedCall("adminAccounts");if(!r||!r.ok)throw new Error(r&&r.error||"Could not load accounts.");const accounts=Array.isArray(r.accounts)?r.accounts:[];if(!accounts.length){body.innerHTML='<tr><td colspan="4" class="empty">No accounts found.</td></tr>';return}body.innerHTML=accounts.map(a=>{const isSelf=String(a.id)===""+(window.currentAdminRow||"");const status=a.enabled?'<span class="status enabled">Enabled</span>':'<span class="status disabled">Disabled</span>';const role=a.admin?"Administrator":"Standard user";const action=a.enabled?"Disable":"Enable";const cls=a.enabled?"danger":"secondary";return '<tr><td>'+escapeHTML(a.person)+'</td><td class="role">'+role+'</td><td>'+status+'</td><td><button class="'+cls+'" style="margin:0" data-account-id="'+Number(a.id)+'" data-account-enabled="'+(!a.enabled)+'" data-account-name="'+escapeHTML(a.person)+'" '+(a.admin&&a.enabled&&accounts.filter(x=>x.admin&&x.enabled).length<=1?'disabled title="Cannot disable the last enabled administrator"':'')+'>'+action+'</button></td></tr>'}).join("");body.querySelectorAll("button[data-account-id]").forEach(btn=>btn.addEventListener("click",()=>changeAccount(btn)))}catch(e){body.innerHTML='<tr><td colspan="4" class="empty">'+escapeHTML(e.message)+'</td></tr>'}finally{$("refreshAccountsButton").disabled=false}}
 async function changeAccount(button){const id=button.dataset.accountId;const enabled=button.dataset.accountEnabled==="true";const name=button.dataset.accountName;if(!confirm((enabled?"Enable":"Disable")+" the account for "+name+"?"))return;button.disabled=true;try{const r=await protectedCall("adminSetAccountEnabled",{id,enabled});if(!r||!r.ok)throw new Error(r&&r.error||"Could not update account.");notice("dashboardNotice",name+" has been "+(enabled?"enabled":"disabled")+".","success");await loadAccounts()}catch(e){notice("dashboardNotice",e.message,"error");button.disabled=false}}
+$("createAccountButton").addEventListener("click",async()=>{
+  const person=$("newAccountName").value.trim();
+  const password=$("newAccountPassword").value;
+  const confirmation=$("confirmAccountPassword").value;
+  const isAdmin=$("newAccountRole").value==="true";
+  if(!person){notice("createAccountNotice","Enter the person's name.","error");return}
+  if(password.length<8){notice("createAccountNotice","Use a password with at least 8 characters.","error");return}
+  if(password!==confirmation){notice("createAccountNotice","The passwords do not match.","error");return}
+  const button=$("createAccountButton");button.disabled=true;button.textContent="Creating…";
+  try{
+    const hash=await hashPassword(password);
+    const result=await protectedCall("adminCreateAccount",{person,hash,admin:isAdmin});
+    if(!result||!result.ok)throw new Error(result&&result.error||"Could not create the account.");
+    $("newAccountName").value="";$("newAccountPassword").value="";$("confirmAccountPassword").value="";
+    notice("createAccountNotice",person+"’s "+(isAdmin?"administrator":"standard user")+" account was created and enabled.","success");
+    await loadAccounts();loadAdminHistory();
+  }catch(error){notice("createAccountNotice",error.message,"error")}
+  finally{button.disabled=false;button.textContent="Create account"}
+});
 $("refreshAccountsButton").addEventListener("click",loadAccounts);
 $("hideUnrestrictedLogs").addEventListener("change",renderSiteHistory);
 if(token){protectedCall("adminHistory").then(r=>{if(r&&r.ok)showDashboard("Administrator");else backToLogin()}).catch(()=>backToLogin())}
