@@ -457,6 +457,7 @@
           try {
             const currentCode = await fetchDailyCode();
             if (entered !== currentCode) {
+              jsonp({ action: "recordDailyCode", ip: currentIP, outcome: "Incorrect code", sessionId: logSessionId }).catch(() => {});
               errorText.textContent = "That daily code is not correct or has expired. Please try again.";
               dailyCodeInput.value = "";
               dailyCodeInput.focus();
@@ -465,6 +466,7 @@
             // Keep this authorization for the browser session; every fresh network
             // check validates against the current code again, so yesterday's code expires.
             sessionStorage.setItem("nsmb_daily_code_ok_" + currentIP, currentCode);
+            jsonp({ action: "recordDailyCode", ip: currentIP, outcome: "Passed", sessionId: logSessionId }).catch(() => {});
             title.textContent = "ACCESS GRANTED";
             message.textContent = "The daily access code is valid. Welcome to NSMB!";
             form.style.display = "none";
