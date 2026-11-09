@@ -85,6 +85,23 @@ button{min-height:40px;padding:0 14px;margin-top:10px;border:0;border-radius:10p
     </section>
 
     <section class="card">
+      <h2>Message board announcement</h2>
+      <p class="hint">This message appears to users after they pass the security check. It automatically stops appearing after the removal date and time.</p>
+      <label for="announcementTitle">Message title</label>
+      <input id="announcementTitle" type="text" maxlength="100" placeholder="Announcement title">
+      <label for="announcementMessage">Message</label>
+      <textarea id="announcementMessage" maxlength="3000" placeholder="Write the message users will see" style="width:100%;min-height:120px;padding:11px 13px;border:1px solid #d8dfeb;border-radius:11px;font:inherit;font-size:14px;resize:vertical"></textarea>
+      <label for="announcementExpiry">Take down at (your local time)</label>
+      <input id="announcementExpiry" type="datetime-local">
+      <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:10px">
+        <button id="saveAnnouncementButton" type="button">Save announcement</button>
+        <button id="clearAnnouncementButton" class="danger" type="button">Remove announcement now</button>
+      </div>
+      <div id="announcementNotice" class="notice" role="status" aria-live="polite"></div>
+      <p class="hint" id="announcementStatus">Loading announcement settings…</p>
+    </section>
+
+    <section class="card">
       <div class="topbar"><div><h2>Account management</h2><p class="hint" style="margin:0">Enable or disable existing authorized users.</p></div><button id="refreshAccountsButton" class="secondary" type="button">Refresh accounts</button></div>
       <div class="history-wrap">
         <table style="min-width:480px"><thead><tr><th>Account</th><th>Role</th><th>Status</th><th>Action</th></tr></thead><tbody id="accountsBody"><tr><td colspan="4" class="empty">Loading accounts…</td></tr></tbody></table>
@@ -165,6 +182,47 @@ const DEFAULT_ANNOUNCEMENT_TITLE="A security update for NSMB";
 const DEFAULT_ANNOUNCEMENT_MESSAGE="NSMB now has an added security check to help protect access to the site. Depending on the network you're using, you may be asked to enter your personal password or the temporary daily access code. Thanks for your patience!";
 function localDateTimeValue(ms){const d=new Date(ms);const pad=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes())}
 function defaultAnnouncementExpiry(){const d=new Date();const daysUntilSunday=(7-d.getDay())%7;d.setDate(d.getDate()+daysUntilSunday);d.setHours(23,59,0,0);return localDateTimeValue(d.getTime())}
+async function loadAnnouncement(){
+  const status=$("announcementStatus");status.textContent="Loading announcement settings…";
+  try{
+    const r=await protectedCall("adminGetAnnouncement");
+    if(!r||!r.ok)throw new Error(r&&r.error||"Could not load announcement settings.");
+    $("announcementTitle").value=r.title||DEFAULT_ANNOUNCEMENT_TITLE;
+    $("announcementMessage").value=r.message||DEFAULT_ANNOUNCEMENT_MESSAGE;
+    $("announcementExpiry").value=r.expiresAt?localDateTimeValue(Number(r.expiresAt)):defaultAnnouncementExpiry();
+    status.textContent=r.active?"Announcement is currently active.":"No active announcement is published. Save to publish the message.";
+  }catch(e){status.textContent=e.message}
+}
+$("saveAnnouncementButton").addEventListener("click",async()=>{
+  const title=$("announcementTitle").value.trim(),message=$("announcementMessage").value.trim(),expiry=$("announcementExpiry").value;
+  if(!title||!message){notice("announcementNotice","Enter both a title and a message.","error");return}
+  if(!expiry){notice("announcementNotice","Choose when the announcement should be taken down.","error");return}
+  const expiresAt=new Date(expiry).getTime();
+  if(!Number.isFinite(expiresAt)||expiresAt<=Date.now()){notice("announcementNotice","Choose a future removal date and time.","error");return}
+  const button=$("saveAnnouncementButton");button.disabled=true;button.textContent="Saving…";
+  try{
+    const r=await protectedCall("adminSaveAnnouncement",{title,message,expiresAt});
+    if(!r||!r.ok)throw new Error(r&&r.error||"Could not save announcement.");
+    notice("announcementNotice","Announcement saved. It will appear after the security check until its removal time.","success");
+    $("announcementStatus").textContent="Announcement is currently active. Takes down "+new Date(expiresAt).toLocaleString()+".";
+  }catch(e){notice("announcementNotice",e.message,"error")}
+  finally{button.disabled=false;button.textContent="Save announcement"}
+});
+$("clearAnnouncementButton").addEventListener("click",async()=>{
+  if(!confirm("Remove the announcement immediately?"))return;
+  const button=$("clearAnnouncementButton");button.disabled=true;
+  try{
+    const r=await protectedCall("adminSaveAnnouncement",{clear:true});
+    if(!r||!r.ok)throw new Error(r&&r.error||"Could not remove announcement.");
+    notice("announcementNotice","Announcement removed. Users will no longer see it.","success");
+    $("announcementStatus").textContent="No active announcement is published.";
+  }catch(e){notice("announcementNotice",e.message,"error")}
+  finally{button.disabled=false}
+});
+const DEFAULT_ANNOUNCEMENT_TITLE="A security update for NSMB";
+const DEFAULT_ANNOUNCEMENT_MESSAGE="NSMB now has an added security check to help protect access to the site. Depending on the network you're using, you may be asked to enter your personal password or the temporary daily access code. Thanks for your patience!";
+function localDateTimeValue(ms){const d=new Date(ms);const pad=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes())}
+function defaultAnnouncementExpiry(){const d=new Date();d.setDate(d.getDate()+((7-d.getDay())%7));d.setHours(23,59,0,0);return localDateTimeValue(d.getTime())}
 async function loadAnnouncement(){
   const status=$("announcementStatus");status.textContent="Loading announcement settings…";
   try{
