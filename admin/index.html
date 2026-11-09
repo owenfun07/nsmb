@@ -132,7 +132,7 @@ $("logoutButton").addEventListener("click",async()=>{try{if(token)await api("adm
 async function protectedCall(action,extra={}){if(!token)throw new Error("Your administrator session has ended. Please sign in again.");const result=await api(action,{...extra,token});if(result&&!result.ok&&/session|administrator/i.test(result.error||"")){backToLogin("Your session expired or is no longer valid. Please sign in again.");throw new Error(result.error)}return result}
 async function loadDailyCode(){const el=$("dailyCode");$("refreshCodeButton").disabled=true;el.textContent="Loading…";try{const result=await protectedCall("adminGetDailyCode");if(!result||!result.ok||!/^\d{4}$/.test(String(result.code||"")))throw new Error(result&&result.error||"Invalid response");el.textContent=result.code;$("dailyCodeHint").textContent="Share only with people who need temporary access. It expires when the generator changes it."}catch(error){el.textContent="Unavailable";$("dailyCodeHint").textContent=error.message}finally{$("refreshCodeButton").disabled=false}}
 $("refreshCodeButton").addEventListener("click",loadDailyCode);
-async function detectIP(){const ip=await getPublicIP();if(!ip||ip.length>45||/\s/.test(ip)){$("ip").textContent="Unable to detect IP";$("ipHint").textContent="Check your internet connection and reload this page.";return}currentIP=ip;$("ip").textContent=ip;$("ipHint").textContent="Detected successfully. Confirm you're on the school network before updating.";$("updateButton").disabled=false}
+async function detectIP(){const ip=await getPublicIP();if(!ip||ip.length>45||/\s/.test(ip)){$("ip").textContent="Unable to detect IP";$("ipHint").textContent="Check your internet connection and reload this page.";return}currentIP=ip;$("ip").textContent=ip;if($("ipToAdd"))$("ipToAdd").value=ip;$("ipHint").textContent="Detected successfully. Confirm you're on the school network before adding.";$("updateButton").disabled=nsmbRole==="Read Only Admin"}
 $("updateButton").addEventListener("click",async()=>{if(!currentIP)return;if(!confirm("Update the School Network entry to "+currentIP+"?\n\nOnly continue if you're connected to your school's Wi-Fi."))return;const button=$("updateButton");button.disabled=true;button.textContent="Updating…";try{const result=await protectedCall("updateSchoolIP",{ip:currentIP});if(result&&result.ok&&result.updated){notice("dashboardNotice","Success! The School Network entry now uses "+result.ip+".","success");loadAdminHistory()}else throw new Error(result&&result.error||"The IP address could not be updated.")}catch(error){notice("dashboardNotice",error.message,"error")}finally{button.disabled=false;button.textContent="Update School IP"}});
 function escapeHTML(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 let cachedSiteHistory=[];
@@ -272,6 +272,14 @@ $("createAccountButton").addEventListener("click", async e => {
 const baseLoadAccounts=loadAccounts;
 loadAccounts=async function(){
   await baseLoadAccounts();
+  try {
+    const data=await protectedCall("adminAccounts");
+    const rows=[...document.querySelectorAll("#accountsBody tr")];
+    (data.accounts||[]).forEach((account,i)=>{
+      const cell=rows[i]&&rows[i].children[1];
+      if(cell)cell.textContent=account.role||(account.admin?"Administrator":"Standard user");
+    });
+  } catch(_) {}
   if(nsmbRole==="Read Only Admin"){
     document.querySelectorAll("#accountsBody button[data-account-id]").forEach(b=>b.remove());
     document.querySelectorAll("#accountsBody tr").forEach(tr=>{const c=tr.lastElementChild;if(c&&!c.querySelector("button"))c.textContent="View only";});
