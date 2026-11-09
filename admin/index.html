@@ -49,8 +49,9 @@ button{min-height:40px;padding:0 14px;margin-top:10px;border:0;border-radius:10p
       <section class="card">
         <div class="eyebrow">DETECTED PUBLIC IP ADDRESS</div>
         <div id="ip" style="margin-top:7px;font-size:21px;font-weight:750;overflow-wrap:anywhere">Checking your connection…</div>
-        <p class="hint" id="ipHint">Confirm you're connected to the school's Wi-Fi before updating.</p>
-        <button id="updateButton" type="button" disabled>Update School IP</button>
+        <p class="hint" id="ipHint">Confirm you're connected to the school's Wi-Fi before adding this address.</p>
+        <div id="schoolIPControls"><label for="ipToAdd">IP address to add</label><input id="ipToAdd" type="text" placeholder="Detected IP address"><button id="updateButton" type="button" disabled>Add School IP</button></div>
+        <div style="margin-top:14px"><strong style="font-size:13px">Registered school IP addresses</strong><div id="schoolIPList" class="hint">Loading…</div></div>
       </section>
     </div>
 
@@ -125,7 +126,7 @@ function api(action,params={}){return new Promise((resolve,reject)=>{const callb
 async function getPublicIP(){try{const r=await fetch("https://api.ipify.org?format=json",{cache:"no-store"});if(!r.ok)throw new Error();const d=await r.json();return String(d.ip||"").trim()}catch(_){return ""}}
 function showDashboard(name){$("loginPanel").hidden=true;$("dashboard").hidden=false;$("adminName").textContent=name||"Administrator";detectIP();loadDailyCode();loadAccounts();loadAnnouncement();loadAdminHistory();loadSiteHistory()}
 function backToLogin(message){token="";sessionStorage.removeItem(TOKEN_KEY);$("dashboard").hidden=true;$("loginPanel").hidden=false;if(message)notice("loginNotice",message,"error")}
-async function login(){const password=$("loginPassword").value;if(!password){notice("loginNotice","Enter your administrator password.","error");return}const button=$("loginButton");button.disabled=true;button.textContent="Verifying…";try{const hash=await hashPassword(password);const ip=await getPublicIP();const result=await api("adminLogin",{hash,ip});if(result&&result.ok&&result.token){token=result.token;sessionStorage.setItem(TOKEN_KEY,token);$("loginPassword").value="";showDashboard(result.person)}else{notice("loginNotice",result&&result.error||"Administrator sign-in failed.","error")}}catch(error){notice("loginNotice",error.message,"error")}finally{button.disabled=false;button.textContent="Sign in"}}
+async function login(){const password=$("loginPassword").value;if(!password){notice("loginNotice","Enter your administrator password.","error");return}const button=$("loginButton");button.disabled=true;button.textContent="Verifying…";try{const hash=await hashPassword(password);const ip=await getPublicIP();const result=await api("adminLogin",{hash,ip});if(result&&result.ok&&result.token){token=result.token;sessionStorage.setItem(TOKEN_KEY,token);$("loginPassword").value="";showDashboard(result.person,result.role)}else{notice("loginNotice",result&&result.error||"Administrator sign-in failed.","error")}}catch(error){notice("loginNotice",error.message,"error")}finally{button.disabled=false;button.textContent="Sign in"}}
 $("loginButton").addEventListener("click",login);$("loginPassword").addEventListener("keydown",e=>{if(e.key==="Enter")login()});
 $("logoutButton").addEventListener("click",async()=>{try{if(token)await api("adminLogout",{token})}catch(_){}backToLogin("You have signed out.")});
 async function protectedCall(action,extra={}){if(!token)throw new Error("Your administrator session has ended. Please sign in again.");const result=await api(action,{...extra,token});if(result&&!result.ok&&/session|administrator/i.test(result.error||"")){backToLogin("Your session expired or is no longer valid. Please sign in again.");throw new Error(result.error)}return result}
@@ -204,7 +205,7 @@ $("clearAnnouncementButton").addEventListener("click",async()=>{
 });
 $("refreshAccountsButton").addEventListener("click",loadAccounts);
 $("hideUnrestrictedLogs").addEventListener("change",renderSiteHistory);
-if(token){protectedCall("adminHistory").then(r=>{if(r&&r.ok)showDashboard("Administrator");else backToLogin()}).catch(()=>backToLogin())}
+if(token){protectedCall("adminHistory").then(r=>{if(r&&r.ok)showDashboard("Administrator",r.role||"Administrator");else backToLogin()}).catch(()=>backToLogin())}
 </script>
 <script>
 let nsmbRole = "Administrator";
@@ -212,6 +213,7 @@ const baseShowDashboard = showDashboard;
 showDashboard = function(name, role) {
   nsmbRole = role || "Administrator";
   baseShowDashboard(name);
+  if (currentIP) $("ipToAdd").value = currentIP;
   $("adminRole").textContent = "(" + nsmbRole + ")";
   const ro = nsmbRole === "Read Only Admin";
   $("createAccountCard").hidden = ro;
@@ -249,7 +251,7 @@ $("updateButton").addEventListener("click", async e => {
     notice("dashboardNotice",r.updated ? "School IP added: "+ip : "That IP is already registered.","success");
     await loadSchoolIPs(); loadAdminHistory();
   } catch(err) { notice("dashboardNotice",err.message,"error"); }
-  finally { btn.disabled=false; btn.textContent="Add School IP"; }
+  finally { btn.disabled=nsmbRole==="Read Only Admin"; btn.textContent="Add School IP"; }
 }, true);
 $("createAccountButton").addEventListener("click", async e => {
   e.stopImmediatePropagation();
