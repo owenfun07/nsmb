@@ -162,9 +162,40 @@
       #access-gate-error { min-height: 20px; color: #c24141 !important; }
       #access-gate-test-note { color: #a16207 !important; font-size: 11px !important; }
 
+    
+      /* Admin-managed announcement banner */
+      #nsmb-announcement {
+        display: none; position: fixed; top: 12px; left: 50%;
+        transform: translateX(-50%); width: min(760px, calc(100% - 28px));
+        box-sizing: border-box; z-index: 800; padding: 13px 44px 13px 16px;
+        border: 1px solid #454545; border-left: 4px solid #ff3333;
+        border-radius: 9px; background: rgba(25,25,25,.97);
+        color: #f5f5f5; text-align: left;
+        font-family: Arial, Helvetica, sans-serif;
+        box-shadow: 0 5px 22px rgba(0,0,0,.35);
+      }
+      #nsmb-announcement-title {
+        margin: 0 0 5px; color: #fff; font-size: 15px; font-weight: 700;
+      }
+      #nsmb-announcement-message {
+        margin: 0; color: #ddd; font-size: 13px; line-height: 1.45;
+        white-space: pre-wrap; overflow-wrap: anywhere;
+      }
+      #nsmb-announcement-close {
+        position: absolute; top: 7px; right: 10px; width: 28px; height: 28px;
+        padding: 0; border: 0; border-radius: 5px; background: transparent;
+        color: #aaa; font-size: 22px; line-height: 1; cursor: pointer;
+      }
+      #nsmb-announcement-close:hover { background: #383838; color: #fff; }
+
     </style>
   </head>
   <body>
+    <section id="nsmb-announcement" role="status" aria-live="polite">
+      <button id="nsmb-announcement-close" type="button" aria-label="Dismiss announcement">×</button>
+      <h2 id="nsmb-announcement-title"></h2>
+      <p id="nsmb-announcement-message"></p>
+    </section>
 
     <div id="access-gate">
       <div id="access-gate-card">
@@ -930,5 +961,50 @@
         }
       }
     </script>
+  
+    <script>
+      // Fetch the current admin-managed announcement without blocking the launcher.
+      (function loadNSMBAnnouncement() {
+        const announcementBox = document.getElementById("nsmb-announcement");
+        const announcementTitle = document.getElementById("nsmb-announcement-title");
+        const announcementMessage = document.getElementById("nsmb-announcement-message");
+        const announcementApi = "https://script.google.com/macros/s/AKfycbzgKViY1qLJPqJCqOErjB0DsO95o61vA4lLcb00OSo5R1BlJ2P516jV0HzLeu-HuPzk/exec";
+
+        document.getElementById("nsmb-announcement-close").addEventListener("click", function () {
+          announcementBox.style.display = "none";
+        });
+
+        const callback = "nsmbAnnouncementCallback_" + Math.random().toString(36).slice(2);
+        const script = document.createElement("script");
+        let finished = false;
+        const cleanup = function () {
+          if (finished) return;
+          finished = true;
+          clearTimeout(timeout);
+          delete window[callback];
+          script.remove();
+        };
+        const timeout = setTimeout(cleanup, 12000);
+
+        window[callback] = function (data) {
+          cleanup();
+          if (!data || data.ok !== true || data.active !== true) return;
+          if (!data.title || !data.message) return;
+
+          // Use textContent so announcement text cannot inject HTML or scripts.
+          announcementTitle.textContent = String(data.title);
+          announcementMessage.textContent = String(data.message);
+          announcementBox.style.display = "block";
+        };
+        script.onerror = cleanup;
+        const query = new URLSearchParams({
+          action: "announcement",
+          callback: callback
+        }).toString();
+        script.src = announcementApi + "?" + query;
+        document.head.appendChild(script);
+      })();
+    </script>
+
   </body>
 </html>
