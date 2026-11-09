@@ -37,7 +37,7 @@ button{min-height:40px;padding:0 14px;margin-top:10px;border:0;border-radius:10p
   </section>
 
   <section id="dashboard" hidden>
-    <div class="topbar"><div><h1>Administration</h1><p class="intro" style="margin-bottom:0">Signed in as <strong id="adminName">Administrator</strong></p></div><button id="logoutButton" class="secondary" type="button">Sign out</button></div>
+    <div class="topbar"><div><h1>Administration</h1><p class="intro" style="margin-bottom:0">Signed in as <strong id="adminName">Administrator</strong> <span id="adminRole" class="role"></span></p></div><button id="logoutButton" class="secondary" type="button">Sign out</button></div>
 
     <div class="grid">
       <section class="card">
@@ -54,12 +54,12 @@ button{min-height:40px;padding:0 14px;margin-top:10px;border:0;border-radius:10p
       </section>
     </div>
 
-    <section class="card">
+    <section class="card" id="createAccountCard">
       <h2>Create an account</h2>
       <p class="hint">Create a new enabled NSMB account. Passwords are hashed in your browser before being sent to the server.</p>
       <div class="grid">
         <div><label for="newAccountName">Person's name</label><input id="newAccountName" type="text" maxlength="80" autocomplete="off" placeholder="Enter their name"></div>
-        <div><label for="newAccountRole">Account type</label><select id="newAccountRole"><option value="false">Standard user</option><option value="true">Administrator</option></select></div>
+        <div><label for="newAccountRole">Account type</label><select id="newAccountRole"><option value="Standard user">Standard user</option><option value="Administrator">Administrator</option><option value="Read Only Admin">Read Only Admin (ROA)</option></select></div>
         <div><label for="newAccountPassword">Password</label><input id="newAccountPassword" type="password" autocomplete="new-password" placeholder="Enter a password"></div>
         <div><label for="confirmAccountPassword">Confirm password</label><input id="confirmAccountPassword" type="password" autocomplete="new-password" placeholder="Enter the password again"></div>
       </div>
@@ -85,23 +85,6 @@ button{min-height:40px;padding:0 14px;margin-top:10px;border:0;border-radius:10p
     </section>
 
     <section class="card">
-      <h2>Message board announcement</h2>
-      <p class="hint">This message appears to users after they pass the security check. It automatically stops appearing after the removal date and time.</p>
-      <label for="announcementTitle">Message title</label>
-      <input id="announcementTitle" type="text" maxlength="100" placeholder="Announcement title">
-      <label for="announcementMessage">Message</label>
-      <textarea id="announcementMessage" maxlength="3000" placeholder="Write the message users will see" style="width:100%;min-height:120px;padding:11px 13px;border:1px solid #d8dfeb;border-radius:11px;font:inherit;font-size:14px;resize:vertical"></textarea>
-      <label for="announcementExpiry">Take down at (your local time)</label>
-      <input id="announcementExpiry" type="datetime-local">
-      <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:10px">
-        <button id="saveAnnouncementButton" type="button">Save announcement</button>
-        <button id="clearAnnouncementButton" class="danger" type="button">Remove announcement now</button>
-      </div>
-      <div id="announcementNotice" class="notice" role="status" aria-live="polite"></div>
-      <p class="hint" id="announcementStatus">Loading announcement settings…</p>
-    </section>
-
-    <section class="card">
       <div class="topbar"><div><h2>Account management</h2><p class="hint" style="margin:0">Enable or disable existing authorized users.</p></div><button id="refreshAccountsButton" class="secondary" type="button">Refresh accounts</button></div>
       <div class="history-wrap">
         <table style="min-width:480px"><thead><tr><th>Account</th><th>Role</th><th>Status</th><th>Action</th></tr></thead><tbody id="accountsBody"><tr><td colspan="4" class="empty">Loading accounts…</td></tr></tbody></table>
@@ -111,7 +94,7 @@ button{min-height:40px;padding:0 14px;margin-top:10px;border:0;border-radius:10p
 
     <section class="card">
       <div class="topbar"><div><h2>Admin logs</h2><p class="hint" style="margin:0">Administrator sign-ins, account changes, and school IP changes.</p></div><button id="refreshAdminHistoryButton" class="secondary" type="button">Refresh</button></div>
-      <div class="history-wrap">
+      <label for="adminHistoryDate">Filter by day</label><input id="adminHistoryDate" type="date" style="max-width:240px"><div class="history-wrap">
         <table><thead><tr><th>Time</th><th>IP address</th><th>Admin</th><th>Event</th><th>Details</th></tr></thead><tbody id="adminHistoryBody"><tr><td colspan="5" class="empty">Loading admin logs…</td></tr></tbody></table>
       </div>
       <p class="hint" id="adminHistoryHint">Showing up to 200 recent events.</p>
@@ -119,7 +102,7 @@ button{min-height:40px;padding:0 14px;margin-top:10px;border:0;border-radius:10p
 
     <section class="card">
       <div class="topbar"><div><h2>Regular site logs</h2><p class="hint" style="margin:0">Network checks and password verification attempts.</p></div><button id="refreshSiteHistoryButton" class="secondary" type="button">Refresh</button></div><label style="display:flex;align-items:center;gap:9px;margin:14px 0 0;font-weight:600"><input id="hideUnrestrictedLogs" type="checkbox" style="width:16px;min-height:16px;margin:0"> Hide unrestricted visitors who are not logged in</label>
-      <div class="history-wrap">
+      <label for="siteHistoryDate">Filter by day</label><input id="siteHistoryDate" type="date" style="max-width:240px"><div class="history-wrap">
         <table><thead><tr><th>Time</th><th>IP address</th><th>User</th><th>Event</th><th>Result</th><th>Attempts</th><th>Details</th></tr></thead><tbody id="siteHistoryBody"><tr><td colspan="7" class="empty">Loading site logs…</td></tr></tbody></table>
       </div>
       <p class="hint" id="siteHistoryHint">Showing up to 200 recent events.</p>
@@ -223,5 +206,94 @@ $("refreshAccountsButton").addEventListener("click",loadAccounts);
 $("hideUnrestrictedLogs").addEventListener("change",renderSiteHistory);
 if(token){protectedCall("adminHistory").then(r=>{if(r&&r.ok)showDashboard("Administrator");else backToLogin()}).catch(()=>backToLogin())}
 </script>
-</body>
+<script>
+let nsmbRole = "Administrator";
+const baseShowDashboard = showDashboard;
+showDashboard = function(name, role) {
+  nsmbRole = role || "Administrator";
+  baseShowDashboard(name);
+  $("adminRole").textContent = "(" + nsmbRole + ")";
+  const ro = nsmbRole === "Read Only Admin";
+  $("createAccountCard").hidden = ro;
+  $("announcementTitle").disabled = ro;
+  $("announcementMessage").disabled = ro;
+  $("announcementExpiry").disabled = ro;
+  $("saveAnnouncementButton").hidden = ro;
+  $("clearAnnouncementButton").hidden = ro;
+  loadSchoolIPs();
+};
+async function loadSchoolIPs() {
+  const box = $("schoolIPList");
+  try {
+    const r = await protectedCall("adminSchoolIPs");
+    if (!r || !r.ok) throw new Error(r && r.error || "Could not load school IPs.");
+    if (!r.ips || !r.ips.length) { box.textContent = "No school IP addresses registered."; return; }
+    box.innerHTML = r.ips.map(x => '<div style="display:flex;justify-content:space-between;padding:8px 0"><span>'+escapeHTML(x.ip)+'</span>'+(nsmbRole === "Read Only Admin" ? '<span>View only</span>' : '<button class="danger" style="margin:0" data-remove-ip="'+Number(x.id)+'">Remove</button>')+'</div>').join("");
+    box.querySelectorAll("[data-remove-ip]").forEach(btn => btn.addEventListener("click", async () => {
+      if (!confirm("Remove this school IP address?")) return;
+      const out = await protectedCall("removeSchoolIP", {id:btn.dataset.removeIp});
+      if (!out || !out.ok) { notice("dashboardNotice",out && out.error || "Could not remove IP.","error"); return; }
+      await loadSchoolIPs(); loadAdminHistory();
+    }));
+  } catch(e) { box.textContent = e.message; }
+}
+$("updateButton").addEventListener("click", async e => {
+  e.stopImmediatePropagation();
+  const ip = $("ipToAdd").value.trim();
+  if (!ip) { notice("dashboardNotice","Enter an IP address.","error"); return; }
+  if (!confirm("Add "+ip+" to the registered school IP addresses?")) return;
+  const btn=$("updateButton"); btn.disabled=true; btn.textContent="Adding…";
+  try {
+    const r=await protectedCall("updateSchoolIP",{ip});
+    if (!r || !r.ok) throw new Error(r && r.error || "Could not add IP.");
+    notice("dashboardNotice",r.updated ? "School IP added: "+ip : "That IP is already registered.","success");
+    await loadSchoolIPs(); loadAdminHistory();
+  } catch(err) { notice("dashboardNotice",err.message,"error"); }
+  finally { btn.disabled=false; btn.textContent="Add School IP"; }
+}, true);
+$("createAccountButton").addEventListener("click", async e => {
+  e.stopImmediatePropagation();
+  const person=$("newAccountName").value.trim(), password=$("newAccountPassword").value, confirmation=$("confirmAccountPassword").value, role=$("newAccountRole").value;
+  if(!person){notice("createAccountNotice","Enter the person's name.","error");return;}
+  if(!password || password!==confirmation){notice("createAccountNotice","Enter matching passwords.","error");return;}
+  const btn=$("createAccountButton");btn.disabled=true;btn.textContent="Creating…";
+  try {
+    const hash=await hashPassword(password);
+    const r=await protectedCall("adminCreateAccount",{person,hash,role});
+    if(!r || !r.ok)throw new Error(r && r.error || "Could not create account.");
+    $("newAccountName").value="";$("newAccountPassword").value="";$("confirmAccountPassword").value="";
+    notice("createAccountNotice",person+"'s "+role+" account was created.","success");
+    await loadAccounts();loadAdminHistory();
+  } catch(err){notice("createAccountNotice",err.message,"error");}
+  finally{btn.disabled=false;btn.textContent="Create account";}
+}, true);
+const baseLoadAccounts=loadAccounts;
+loadAccounts=async function(){
+  await baseLoadAccounts();
+  if(nsmbRole==="Read Only Admin"){
+    document.querySelectorAll("#accountsBody button[data-account-id]").forEach(b=>b.remove());
+    document.querySelectorAll("#accountsBody tr").forEach(tr=>{const c=tr.lastElementChild;if(c&&!c.querySelector("button"))c.textContent="View only";});
+  }
+};
+const baseAdminHistory=loadAdminHistory;
+loadAdminHistory=async function(){
+  const d=$("adminHistoryDate").value;
+  if(!d)return baseAdminHistory();
+  const body=$("adminHistoryBody");
+  try{const r=await protectedCall("adminHistory",{date:d});if(!r||!r.ok)throw new Error(r&&r.error||"Could not load logs.");renderRows("adminHistoryBody",r.history,5,"admin");$("adminHistoryHint").textContent="Showing "+(r.history||[]).length+" events from "+d+".";}
+  catch(e){body.innerHTML='<tr><td colspan="5" class="empty">'+escapeHTML(e.message)+'</td></tr>';}
+};
+const baseSiteHistory=loadSiteHistory;
+loadSiteHistory=async function(){
+  const d=$("siteHistoryDate").value;
+  if(!d)return baseSiteHistory();
+  const body=$("siteHistoryBody");
+  try{const r=await protectedCall("adminSiteHistory",{date:d});if(!r||!r.ok)throw new Error(r&&r.error||"Could not load logs.");cachedSiteHistory=Array.isArray(r.history)?r.history:[];renderSiteHistory();$("siteHistoryHint").textContent="Showing "+cachedSiteHistory.length+" events from "+d+".";}
+  catch(e){body.innerHTML='<tr><td colspan="7" class="empty">'+escapeHTML(e.message)+'</td></tr>';}
+};
+const d=new Date(),pad=n=>String(n).padStart(2,"0"),today=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+$("adminHistoryDate").value=today;$("siteHistoryDate").value=today;
+$("adminHistoryDate").addEventListener("change",loadAdminHistory);
+$("siteHistoryDate").addEventListener("change",loadSiteHistory);
+</script></body>
 </html>
