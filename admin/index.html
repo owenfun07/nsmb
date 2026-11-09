@@ -248,7 +248,7 @@ $("updateButton").addEventListener("click", async e => {
   try {
     const r=await protectedCall("updateSchoolIP",{ip});
     if (!r || !r.ok) throw new Error(r && r.error || "Could not add IP.");
-    notice("dashboardNotice",r.updated ? "School IP added: "+ip : "That IP is already registered.","success");
+    notice("dashboardNotice",r.added ? "School IP added: "+ip : "That IP is already registered.","success");
     await loadSchoolIPs(); loadAdminHistory();
   } catch(err) { notice("dashboardNotice",err.message,"error"); }
   finally { btn.disabled=nsmbRole==="Read Only Admin"; btn.textContent="Add School IP"; }
