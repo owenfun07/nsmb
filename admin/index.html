@@ -219,47 +219,6 @@ $("clearAnnouncementButton").addEventListener("click",async()=>{
   }catch(e){notice("announcementNotice",e.message,"error")}
   finally{button.disabled=false}
 });
-const DEFAULT_ANNOUNCEMENT_TITLE="A security update for NSMB";
-const DEFAULT_ANNOUNCEMENT_MESSAGE="NSMB now has an added security check to help protect access to the site. Depending on the network you're using, you may be asked to enter your personal password or the temporary daily access code. Thanks for your patience!";
-function localDateTimeValue(ms){const d=new Date(ms);const pad=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes())}
-function defaultAnnouncementExpiry(){const d=new Date();d.setDate(d.getDate()+((7-d.getDay())%7));d.setHours(23,59,0,0);return localDateTimeValue(d.getTime())}
-async function loadAnnouncement(){
-  const status=$("announcementStatus");status.textContent="Loading announcement settings…";
-  try{
-    const r=await protectedCall("adminGetAnnouncement");
-    if(!r||!r.ok)throw new Error(r&&r.error||"Could not load announcement settings.");
-    $("announcementTitle").value=r.title||DEFAULT_ANNOUNCEMENT_TITLE;
-    $("announcementMessage").value=r.message||DEFAULT_ANNOUNCEMENT_MESSAGE;
-    $("announcementExpiry").value=r.expiresAt?localDateTimeValue(Number(r.expiresAt)):defaultAnnouncementExpiry();
-    status.textContent=r.active?"Announcement is currently active.":"No active announcement is published. Save to publish the message.";
-  }catch(e){status.textContent=e.message}
-}
-$("saveAnnouncementButton").addEventListener("click",async()=>{
-  const title=$("announcementTitle").value.trim(),message=$("announcementMessage").value.trim(),expiry=$("announcementExpiry").value;
-  if(!title||!message){notice("announcementNotice","Enter both a title and a message.","error");return}
-  if(!expiry){notice("announcementNotice","Choose when the announcement should be taken down.","error");return}
-  const expiresAt=new Date(expiry).getTime();
-  if(!Number.isFinite(expiresAt)||expiresAt<=Date.now()){notice("announcementNotice","Choose a future removal date and time.","error");return}
-  const button=$("saveAnnouncementButton");button.disabled=true;button.textContent="Saving…";
-  try{
-    const r=await protectedCall("adminSaveAnnouncement",{title,message,expiresAt});
-    if(!r||!r.ok)throw new Error(r&&r.error||"Could not save announcement.");
-    notice("announcementNotice","Announcement saved. It will appear after the security check until its removal time.","success");
-    $("announcementStatus").textContent="Announcement is currently active. Takes down "+new Date(expiresAt).toLocaleString()+".";
-  }catch(e){notice("announcementNotice",e.message,"error")}
-  finally{button.disabled=false;button.textContent="Save announcement"}
-});
-$("clearAnnouncementButton").addEventListener("click",async()=>{
-  if(!confirm("Remove the announcement immediately?"))return;
-  const button=$("clearAnnouncementButton");button.disabled=true;
-  try{
-    const r=await protectedCall("adminSaveAnnouncement",{clear:true});
-    if(!r||!r.ok)throw new Error(r&&r.error||"Could not remove announcement.");
-    notice("announcementNotice","Announcement removed. Users will no longer see it.","success");
-    $("announcementStatus").textContent="No active announcement is published.";
-  }catch(e){notice("announcementNotice",e.message,"error")}
-  finally{button.disabled=false}
-});
 $("refreshAccountsButton").addEventListener("click",loadAccounts);
 $("hideUnrestrictedLogs").addEventListener("change",renderSiteHistory);
 if(token){protectedCall("adminHistory").then(r=>{if(r&&r.ok)showDashboard("Administrator");else backToLogin()}).catch(()=>backToLogin())}
