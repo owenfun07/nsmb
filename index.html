@@ -28,6 +28,11 @@
         cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 4px #900;
       }
       .launch-btn:active { box-shadow: 0 0px #900; transform: translateY(4px); }
+      .launch-btn:disabled {
+        background: #666 !important; color: #bbb; box-shadow: 0 4px #444;
+        cursor: not-allowed; transform: none; opacity: .85;
+      }
+      .launch-btn:disabled:active { box-shadow: 0 4px #444; transform: none; }
 
       /* 2. Regular Unity Loader */
       #unity-loader-ready {
@@ -523,7 +528,7 @@
 
     <div id="launch-screen">
       <h2 style="color: white; font-family: 'Courier New', monospace; margin-bottom: 30px;">WELCOME BACK!</h2>
-      <button class="launch-btn" id="main-launch-btn" onclick="handleLaunch()">LAUNCH</button>
+      <button class="launch-btn" id="main-launch-btn" onclick="handleLaunch()" disabled aria-disabled="true">LAUNCH</button>
       <a href="https://sites.google.com/view/owen-fun" target="_blank" class="footer-link">Powered by Owen.fun</a>
     </div>
 
@@ -963,12 +968,42 @@
     </script>
   
     <script>
-      // Fetch the current admin-managed announcement without blocking the launcher.
+      // Fetch the current admin-managed announcement and require a 7-second reading pause.
       (function loadNSMBAnnouncement() {
         const announcementBox = document.getElementById("nsmb-announcement");
         const announcementTitle = document.getElementById("nsmb-announcement-title");
         const announcementMessage = document.getElementById("nsmb-announcement-message");
+        const launchButton = document.getElementById("main-launch-btn");
+        const originalLaunchText = launchButton ? launchButton.textContent : "LAUNCH";
         const announcementApi = "https://script.google.com/macros/s/AKfycbzgKViY1qLJPqJCqOErjB0DsO95o61vA4lLcb00OSo5R1BlJ2P516jV0HzLeu-HuPzk/exec";
+
+        let lockFinished = false;
+        let countdownInterval = null;
+        const unlockLaunchButton = function () {
+          if (lockFinished) return;
+          lockFinished = true;
+          if (countdownInterval !== null) clearInterval(countdownInterval);
+          if (launchButton) {
+            launchButton.disabled = false;
+            launchButton.setAttribute("aria-disabled", "false");
+            launchButton.textContent = originalLaunchText;
+          }
+        };
+        const holdLaunchButtonForReading = function () {
+          if (!launchButton) return;
+          launchButton.disabled = true;
+          launchButton.setAttribute("aria-disabled", "true");
+          let secondsLeft = 7;
+          launchButton.textContent = "PLEASE READ UPDATE (" + secondsLeft + ")";
+          countdownInterval = setInterval(function () {
+            secondsLeft -= 1;
+            if (secondsLeft <= 0) {
+              unlockLaunchButton();
+            } else {
+              launchButton.textContent = "PLEASE READ UPDATE (" + secondsLeft + ")";
+            }
+          }, 1000);
+        };
 
         document.getElementById("nsmb-announcement-close").addEventListener("click", function () {
           announcementBox.style.display = "none";
@@ -984,19 +1019,28 @@
           delete window[callback];
           script.remove();
         };
-        const timeout = setTimeout(cleanup, 12000);
+        const timeout = setTimeout(function () {
+          cleanup();
+          unlockLaunchButton();
+        }, 6000);
 
         window[callback] = function (data) {
           cleanup();
-          if (!data || data.ok !== true || data.active !== true) return;
-          if (!data.title || !data.message) return;
+          if (!data || data.ok !== true || data.active !== true || !data.title || !data.message) {
+            unlockLaunchButton();
+            return;
+          }
 
           // Use textContent so announcement text cannot inject HTML or scripts.
           announcementTitle.textContent = String(data.title);
           announcementMessage.textContent = String(data.message);
           announcementBox.style.display = "block";
+          holdLaunchButtonForReading();
         };
-        script.onerror = cleanup;
+        script.onerror = function () {
+          cleanup();
+          unlockLaunchButton();
+        };
         const query = new URLSearchParams({
           action: "announcement",
           callback: callback
