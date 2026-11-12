@@ -550,6 +550,7 @@
         <option value="v2.1.0.1">Version 2.1.0.1</option>
         <option value="vcmi">Vic's Custom Match-inator v20.0.2</option>
         <option value="beta">Beta 1.7.1.0</option>
+        <option value="kkt">KKT's Gooffy Little Mod — Experimental (v1.1.0)</option>
       </select>
 
       <div class="settings-section-title">Advanced</div>
@@ -632,6 +633,16 @@
           frameworkPath: "v1.7.1.0-beta/Build/MarioVsLuigi-WebGL.framework.js.unityweb",
           codePath: "v1.7.1.0-beta/Build/MarioVsLuigi-WebGL.wasm.unityweb",
           streamingAssetsUrl: "v1.7.1.0-beta/StreamingAssets"
+        },
+        kkt: {
+          label: "KKT's Gooffy Little Mod — Experimental",
+          productVersion: "1.1.0",
+          basePath: "https://nsmb-itch-proxy.owen-vozzella.workers.dev/",
+          loaderPath: "https://nsmb-itch-proxy.owen-vozzella.workers.dev/webgl.loader.js",
+          dataPath: "https://nsmb-itch-proxy.owen-vozzella.workers.dev/webgl.data.unityweb",
+          frameworkPath: "https://nsmb-itch-proxy.owen-vozzella.workers.dev/webgl.framework.js.unityweb",
+          codePath: "https://nsmb-itch-proxy.owen-vozzella.workers.dev/webgl.wasm.unityweb",
+          streamingAssetsUrl: "StreamingAssets"
         }
       };
 
@@ -644,6 +655,8 @@
         if (!btn) return;
         if (sessionVersion === "beta") {
           btn.innerHTML = "LAUNCH BETA";
+        } else if (sessionVersion === "kkt") {
+          btn.innerHTML = "LAUNCH EXPERIMENTAL MOD";
         } else if (sessionVersion === "regular") {
           btn.innerHTML = "LAUNCH";
         } else {
@@ -912,8 +925,8 @@
           frameworkUrl: config.frameworkPath,
           codeUrl: config.codePath,
           streamingAssetsUrl: config.streamingAssetsUrl,
-          companyName: sessionVersion === "vcmi" ? "vlco_o" : "ipodtouch0218",
-          productName: "NSMB-MarioVsLuigi",
+          companyName: sessionVersion === "vcmi" ? "vlco_o" : (sessionVersion === "kkt" ? "KingKittyTurnip" : "ipodtouch0218"),
+          productName: sessionVersion === "kkt" ? "KKT's Gooffy Little Mod" : "NSMB-MarioVsLuigi",
           productVersion: config.productVersion,
         }, (p) => {
             // Logic: Once real download hits 75%, stop listening to real 'p' and start slow crawl
