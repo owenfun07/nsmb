@@ -249,6 +249,30 @@
           sessionStorage.setItem(logSessionStorageKey, logSessionId);
         }
 
+        window.nsmbLogSessionId = logSessionId;
+        // Game activity reporting is telemetry only. Failures never affect access.
+        window.nsmbStartGameHeartbeat = function (gameKey, gameLabel) {
+          if (window.nsmbGameHeartbeatStarted) return;
+          window.nsmbGameHeartbeatStarted = true;
+          let sending = false;
+          const sendHeartbeat = function () {
+            if (sending || !currentIP) return;
+            sending = true;
+            jsonp({
+              action: "heartbeat",
+              ip: currentIP,
+              sessionId: logSessionId,
+              player: sessionStorage.getItem("nsmb_player_name") || "Guest",
+              gameKey: String(gameKey || "unknown").slice(0, 60),
+              gameLabel: String(gameLabel || gameKey || "Unknown game").slice(0, 120)
+            }).catch(function () {
+              // Apps Script may be unavailable on some networks. Keep the game running.
+            }).finally(function () { sending = false; });
+          };
+          sendHeartbeat();
+          window.setInterval(sendHeartbeat, 60000);
+        };
+
         function jsonp(params) {
           return new Promise((resolve, reject) => {
             const callback = "nsmbAccessCallback_" + Math.random().toString(36).slice(2);
@@ -392,6 +416,7 @@
               }
 
               if (sessionResult.allowed) {
+                if (sessionResult.person) sessionStorage.setItem("nsmb_player_name", sessionResult.person);
                 allowEntry(silent);
                 return;
               }
@@ -443,6 +468,7 @@
             const result = await jsonp({ action: "verify", ip: currentIP, hash, sessionId: logSessionId });
             if (result && result.ok && result.allowed) {
               sessionStorage.setItem("nsmb_access_ok_" + currentIP, hash);
+              if (result.person) sessionStorage.setItem("nsmb_player_name", result.person);
               title.textContent = "ACCESS GRANTED";
               message.textContent = result.person ? ("Welcome, " + result.person + ".") : "You're authorized. Welcome to NSMB!";
               form.style.display = "none";
@@ -951,6 +977,11 @@
 
         unityPromise
           .then(() => {
+            // Report game activity only after Unity has initialized successfully.
+            // The heartbeat is monitoring-only and cannot change this session's access.
+            if (typeof window.nsmbStartGameHeartbeat === "function") {
+              window.nsmbStartGameHeartbeat(sessionVersion, config.label || config.productVersion || sessionVersion);
+            }
             // Give the browser a couple of paint frames after Unity reports success.
             // This is especially important for the older Beta loader, which resolves
             // directly after its postRun callback.
