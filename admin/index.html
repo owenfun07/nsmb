@@ -41,10 +41,10 @@ button{min-height:40px;padding:0 14px;margin-top:10px;border:0;border-radius:10p
 
     <div class="grid">
       <section class="card">
-        <div class="eyebrow">CURRENT DAILY ACCESS CODE</div>
+        <div class="eyebrow">CURRENT weekly access code</div>
         <div id="dailyCode">Loading…</div>
         <p class="hint" id="dailyCodeHint">Only administrators can view this code.</p>
-        <button id="refreshCodeButton" class="secondary" type="button">Refresh daily code</button>
+        <button id="refreshCodeButton" class="secondary" type="button">Refresh weekly code</button>
       </section>
       <section class="card">
         <div class="eyebrow">DETECTED PUBLIC IP ADDRESS</div>
@@ -171,7 +171,7 @@ $("createAccountButton").addEventListener("click",async()=>{
 });
 
 const DEFAULT_ANNOUNCEMENT_TITLE="A security update for NSMB";
-const DEFAULT_ANNOUNCEMENT_MESSAGE="NSMB now has an added security check to help protect access to the site. Depending on the network you're using, you may be asked to enter your personal password or the temporary daily access code. Thanks for your patience!";
+const DEFAULT_ANNOUNCEMENT_MESSAGE="NSMB now has an added security check to help protect access to the site. Depending on the network you're using, you may be asked to enter your personal password or the temporary weekly access code. Thanks for your patience!";
 function localDateTimeValue(ms){const d=new Date(ms);const pad=n=>String(n).padStart(2,"0");return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes())}
 function defaultAnnouncementExpiry(){const d=new Date();const daysUntilSunday=(7-d.getDay())%7;d.setDate(d.getDate()+daysUntilSunday);d.setHours(23,59,0,0);return localDateTimeValue(d.getTime())}
 async function loadAnnouncement(){
