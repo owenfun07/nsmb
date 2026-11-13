@@ -160,9 +160,9 @@
         font: 600 14px Arial, Helvetica, sans-serif; cursor: pointer;
       }
       #access-gate-card button:hover { background: #2f70a8; }
-      #daily-code-area { display: none; margin-top: 16px; padding-top: 14px; border-top: 1px solid #e5eaf0; }
-      #daily-code-area .daily-label { margin: 0 0 4px; color: #64748b; font-size: 12px; }
-      #daily-code-area input { text-align: center; letter-spacing: .35em; font-size: 20px; }
+      #weekly-code-area { display: none; margin-top: 16px; padding-top: 14px; border-top: 1px solid #e5eaf0; }
+      #weekly-code-area .daily-label { margin: 0 0 4px; color: #64748b; font-size: 12px; }
+      #weekly-code-area input { text-align: center; letter-spacing: .35em; font-size: 20px; }
       #access-gate-card button:disabled { opacity: .55; cursor: wait; }
       #access-gate-error { min-height: 20px; color: #c24141 !important; }
       #access-gate-test-note { color: #a16207 !important; font-size: 11px !important; }
@@ -212,11 +212,11 @@
                  placeholder="Enter your personal password" aria-label="Personal password" required>
           <button id="access-gate-submit" type="submit">UNLOCK NSMB</button>
         </form>
-        <div id="daily-code-area">
-          <p class="daily-label">Or use today's temporary access code</p>
-          <input id="daily-code-input" type="text" inputmode="numeric" autocomplete="one-time-code"
-                 maxlength="4" pattern="[0-9]{4}" placeholder="4-digit code" aria-label="Daily access code">
-          <button id="daily-code-submit" type="button">UNLOCK WITH DAILY CODE</button>
+        <div id="weekly-code-area">
+          <p class="daily-label">Or use this week's temporary access code</p>
+          <input id="weekly-code-input" type="text" inputmode="numeric" autocomplete="one-time-code"
+                 maxlength="4" pattern="[0-9]{4}" placeholder="4-digit code" aria-label="weekly access code">
+          <button id="weekly-code-submit" type="button">UNLOCK WITH weekly code</button>
         </div>
         <p id="access-gate-error" role="status"></p>
         <button id="access-gate-retry" type="button" style="display:none">RETRY CHECK</button>
@@ -236,9 +236,9 @@
         const submitButton = document.getElementById("access-gate-submit");
         const errorText = document.getElementById("access-gate-error");
         const retryButton = document.getElementById("access-gate-retry");
-        const dailyCodeArea = document.getElementById("daily-code-area");
-        const dailyCodeInput = document.getElementById("daily-code-input");
-        const dailyCodeSubmit = document.getElementById("daily-code-submit");
+        const dailyCodeArea = document.getElementById("weekly-code-area");
+        const dailyCodeInput = document.getElementById("weekly-code-input");
+        const dailyCodeSubmit = document.getElementById("weekly-code-submit");
         let currentIP = "";
         const logSessionStorageKey = "nsmb_log_session_id";
         let logSessionId = sessionStorage.getItem(logSessionStorageKey);
@@ -525,7 +525,7 @@
             }
           } catch (error) {
             errorText.textContent = (error.message || "Password verification failed. Please try again.") +
-              " The password service may be temporarily unavailable; you can try the daily code below.";
+              " The password service may be temporarily unavailable; you can try the weekly code below.";
             dailyCodeArea.style.display = "block";
           } finally {
             submitButton.disabled = false;
@@ -537,16 +537,16 @@
         async function fetchDailyCode() {
           const url = DAILY_CODE_API + "?key=" + encodeURIComponent(DAILY_CODE_KEY) + "&_=" + Date.now();
           const response = await fetch(url, { cache: "no-store" });
-          if (!response.ok) throw new Error("Daily-code service returned HTTP " + response.status + ".");
+          if (!response.ok) throw new Error("weekly-code service returned HTTP " + response.status + ".");
           const code = (await response.text()).trim();
-          if (!/^\d{4}$/.test(code)) throw new Error("Daily-code service returned an invalid response.");
+          if (!/^\d{4}$/.test(code)) throw new Error("weekly-code service returned an invalid response.");
           return code;
         }
 
         dailyCodeSubmit.addEventListener("click", async () => {
           const entered = dailyCodeInput.value.trim();
           if (!/^\d{4}$/.test(entered)) {
-            errorText.textContent = "Enter all four digits of the daily code.";
+            errorText.textContent = "Enter all four digits of the weekly code.";
             dailyCodeInput.focus();
             return;
           }
@@ -557,7 +557,7 @@
             const currentCode = await fetchDailyCode();
             if (entered !== currentCode) {
               jsonp({ action: "recordDailyCode", ip: currentIP, outcome: "Incorrect code", sessionId: logSessionId }).catch(() => {});
-              errorText.textContent = "That daily code is not correct or has expired. Please try again.";
+              errorText.textContent = "That weekly code is not correct or has expired. Please try again.";
               dailyCodeInput.value = "";
               dailyCodeInput.focus();
               return;
@@ -567,15 +567,15 @@
             sessionStorage.setItem("nsmb_daily_code_ok_" + currentIP, currentCode);
             jsonp({ action: "recordDailyCode", ip: currentIP, outcome: "Passed", sessionId: logSessionId }).catch(() => {});
             title.textContent = "ACCESS GRANTED";
-            message.textContent = "The daily access code is valid. Welcome to NSMB!";
+            message.textContent = "The weekly access code is valid. Welcome to NSMB!";
             form.style.display = "none";
             dailyCodeArea.style.display = "none";
             setTimeout(allowEntry, 650);
           } catch (error) {
-            errorText.textContent = "Couldn't verify the daily code. " + (error.message || "Please try again.");
+            errorText.textContent = "Couldn't verify the weekly code. " + (error.message || "Please try again.");
           } finally {
             dailyCodeSubmit.disabled = false;
-            dailyCodeSubmit.textContent = "UNLOCK WITH DAILY CODE";
+            dailyCodeSubmit.textContent = "UNLOCK WITH weekly code";
           }
         });
 
