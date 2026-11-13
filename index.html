@@ -250,13 +250,44 @@
         }
 
         window.nsmbLogSessionId = logSessionId;
-        // Game activity reporting is telemetry only. Failures never affect access.
+        // The heartbeat both records activity and revalidates the player's access.
+        let heartbeatInterval = null;
+        window.nsmbRevokeAccess = function (reason) {
+          if (window.nsmbAccessRevoked) return;
+          window.nsmbAccessRevoked = true;
+          window.nsmbAccessIsGranted = false;
+          sessionStorage.removeItem("nsmb_access_recently_passed");
+          if (heartbeatInterval !== null) {
+            clearInterval(heartbeatInterval);
+            heartbeatInterval = null;
+          }
+
+          gate.style.display = "flex";
+          gate.classList.remove("success");
+          document.getElementById("access-gate-status").style.display = "none";
+          title.textContent = "ACCESS REVOKED";
+          message.textContent = reason || "This account or network is no longer authorized to play NSMB.";
+          form.style.display = "none";
+          dailyCodeArea.style.display = "none";
+          errorText.textContent = "";
+          retryButton.textContent = "RETURN TO ACCESS CHECK";
+          retryButton.style.display = "block";
+          retryButton.onclick = function () { window.location.reload(); };
+
+          const instance = window.nsmbUnityInstance;
+          if (instance && typeof instance.Quit === "function") {
+            Promise.resolve(instance.Quit()).catch(function (error) {
+              console.warn("Unity shutdown after access revocation failed:", error);
+            });
+          }
+        };
+
         window.nsmbStartGameHeartbeat = function (gameKey, gameLabel) {
-          if (window.nsmbGameHeartbeatStarted) return;
+          if (window.nsmbGameHeartbeatStarted || window.nsmbAccessRevoked) return;
           window.nsmbGameHeartbeatStarted = true;
           let sending = false;
           const sendHeartbeat = function () {
-            if (sending || !currentIP) return;
+            if (sending || !currentIP || window.nsmbAccessRevoked) return;
             sending = true;
             jsonp({
               action: "heartbeat",
@@ -265,12 +296,16 @@
               player: sessionStorage.getItem("nsmb_player_name") || "Guest",
               gameKey: String(gameKey || "unknown").slice(0, 60),
               gameLabel: String(gameLabel || gameKey || "Unknown game").slice(0, 120)
+            }).then(function (result) {
+              if (result && result.allowed === false) {
+                window.nsmbRevokeAccess(result.reason || result.message || "Your account or network is no longer authorized to play.");
+              }
             }).catch(function () {
-              // Apps Script may be unavailable on some networks. Keep the game running.
+              // A temporary service/network failure does not interrupt gameplay.
             }).finally(function () { sending = false; });
           };
           sendHeartbeat();
-          window.setInterval(sendHeartbeat, 60000);
+          heartbeatInterval = window.setInterval(sendHeartbeat, 60000);
         };
 
         function jsonp(params) {
@@ -976,9 +1011,10 @@
         });
 
         unityPromise
-          .then(() => {
-            // Report game activity only after Unity has initialized successfully.
-            // The heartbeat is monitoring-only and cannot change this session's access.
+          .then((instance) => {
+            // Keep the Unity instance so it can be shut down if access is revoked.
+            window.nsmbUnityInstance = instance || null;
+            // Begin the combined activity and authorization heartbeat after initialization.
             if (typeof window.nsmbStartGameHeartbeat === "function") {
               window.nsmbStartGameHeartbeat(sessionVersion, config.label || config.productVersion || sessionVersion);
             }
