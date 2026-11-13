@@ -294,6 +294,8 @@
               ip: currentIP,
               sessionId: logSessionId,
               player: sessionStorage.getItem("nsmb_player_name") || "Guest",
+              hash: sessionStorage.getItem("nsmb_access_ok_" + currentIP) || "",
+              dailyCode: sessionStorage.getItem("nsmb_daily_code_ok_" + currentIP) || "",
               gameKey: String(gameKey || "unknown").slice(0, 60),
               gameLabel: String(gameLabel || gameKey || "Unknown game").slice(0, 120)
             }).then(function (result) {
