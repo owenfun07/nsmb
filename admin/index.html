@@ -94,6 +94,14 @@ button{min-height:40px;padding:0 14px;margin-top:10px;border:0;border-radius:10p
     </section>
 
     <section class="card">
+      <div class="topbar"><div><h2>Currently playing</h2><p class="hint" style="margin:0">Sessions that sent a heartbeat in the last 2½ minutes. This list refreshes automatically.</p></div><button id="refreshLiveGamesButton" class="secondary" type="button">Refresh</button></div>
+      <div class="history-wrap">
+        <table style="min-width:560px"><thead><tr><th>Player</th><th>Game / version</th><th>IP address</th><th>Last update</th></tr></thead><tbody id="liveGamesBody"><tr><td colspan="4" class="empty">Loading active games…</td></tr></tbody></table>
+      </div>
+      <p class="hint" id="liveGamesHint">Activity updates approximately once per minute. Stale sessions disappear automatically.</p>
+    </section>
+
+    <section class="card">
       <div class="topbar"><div><h2>Admin logs</h2><p class="hint" style="margin:0">Administrator sign-ins, account changes, and school IP changes.</p></div><button id="refreshAdminHistoryButton" class="secondary" type="button">Refresh</button></div>
       <label for="adminHistoryDate">Filter by day</label><input id="adminHistoryDate" type="date" style="max-width:240px"><div class="history-wrap">
         <table><thead><tr><th>Time</th><th>IP address</th><th>Admin</th><th>Event</th><th>Details</th></tr></thead><tbody id="adminHistoryBody"><tr><td colspan="5" class="empty">Loading admin logs…</td></tr></tbody></table>
@@ -305,5 +313,30 @@ const d=new Date(),pad=n=>String(n).padStart(2,"0"),today=d.getFullYear()+"-"+pa
 $("adminHistoryDate").value=today;$("siteHistoryDate").value=today;
 $("adminHistoryDate").addEventListener("change",loadAdminHistory);
 $("siteHistoryDate").addEventListener("change",loadSiteHistory);
+
+async function loadLiveGames(){
+  const body=$("liveGamesBody");
+  if(!body || !token || $("dashboard").hidden) return;
+  try{
+    const r=await protectedCall("adminLiveGames");
+    if(!r||!r.ok)throw new Error(r&&r.error||"Could not load live game activity.");
+    const sessions=Array.isArray(r.sessions)?r.sessions:[];
+    if(!sessions.length){
+      body.innerHTML='<tr><td colspan="4" class="empty">No active games are currently reporting.</td></tr>';
+    }else{
+      body.innerHTML=sessions.map(s=>'<tr><td>'+escapeHTML(s.player||"Guest")+'</td><td>'+escapeHTML(s.gameLabel||s.gameKey||"Unknown game")+'</td><td>'+escapeHTML(s.ip||"")+'</td><td>'+escapeHTML(s.lastSeen||"Just now")+'</td></tr>').join("");
+    }
+    $("liveGamesHint").textContent="Showing "+sessions.length+" active session"+(sessions.length===1?"":"s")+". Activity is considered active for 2½ minutes.";
+  }catch(e){
+    body.innerHTML='<tr><td colspan="4" class="empty">'+escapeHTML(e.message)+'</td></tr>';
+  }
+}
+$("refreshLiveGamesButton").addEventListener("click",loadLiveGames);
+const liveGamesRefreshTimer=setInterval(()=>{if(token&&!$("dashboard").hidden)loadLiveGames()},30000);
+const originalShowDashboardForLive=showDashboard;
+showDashboard=function(name,role){
+  originalShowDashboardForLive(name,role);
+  loadLiveGames();
+};
 </script></body>
 </html>
